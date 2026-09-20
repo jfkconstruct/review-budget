@@ -1,72 +1,81 @@
 # Review Budget
 
-A router is a classifier you are allowed to trust with a decision. The difference is a
-measured calibration curve, and this repo is about the measurement, not the classifier.
+Your reviewers have four hours. Which cases should they open?
 
-## The argument
+Review Budget takes a queue of cases an AI has already decided, a fixed number of reviewer
+hours, and shows which cases are worth a human's time. Pointed at the cases most likely to
+be wrong and most expensive if they are, the same four hours prevent about three times the
+damage they prevent under a fixed confidence cutoff.
 
-Typed output is commodity: 391 of 447 models on OpenRouter do structured outputs. The
-scarce property is a probability that means what it says. That is what lets a workflow
-**route** (auto-approve above the band, human reads the band, reject below) instead of
-merely **label**. A confidence number you have not measured cannot carry a decision, no
-matter how confident it sounds, so the first artifact in this repo is a bake-off that
-tries to falsify the calibration claim of the model the router is built on.
+**Try it in three steps:**
 
-TypeSafe's Jev returns a native per-answer probability from OpenRouter's
-`/api/alpha/decisions` endpoint. Chat models can be asked for a probability, or have one
-read out of their logprobs. The question this repo answers with numbers: does the native
-one actually track reality better, and by how much, on a task with gold labels?
+1. Download this repository (green **Code** button, **Download ZIP**) and unzip it.
+2. Double-click `demo.html`. It opens in your browser, no install, nothing leaves your machine.
+3. Drag the hours dial. Switch the model. Read the limits panel.
 
-## Stage 1: the judge bake-off
+---
 
-**Task.** BoolQ validation (Google, public, gold yes/no labels). 400 rows sampled with a
-fixed seed. Gold labels mean calibration is measurable without inventing any labels of our
-own, which is the point: a calibration study on labels the author produced is a circle.
+## What you are looking at
 
-**Arms.** All three answer the same question over the same passage and emit one
-probability of yes.
+Two lists, side by side, built from the same reviewer hours.
 
-| arm | how the probability is produced |
-|---|---|
-| `typesafe/jev-1.13` | native `noul`, the decisions endpoint's own probability |
-| `openai/gpt-5-mini` | verbalized probability in structured JSON |
-| `google/gemini-2.5-flash-lite` | verbalized probability in structured JSON |
+The left list is what a fixed cutoff sends you: every case the model was less than a set
+confidence on. The right list is ranked by expected harm: how likely the model is wrong,
+times what that mistake would cost.
 
-`qwen/qwen3.7-flash` was the first baseline and was dropped: it is listed in
-`/api/v1/models` but 404s on `chat/completions`. Same class of trap as Jev's, in the other
-direction. The model list is not a routing table.
+The lists barely overlap. Each one says how many of its cases were actually wrong and how
+much of the queue's damage opening them prevents. That gap is the whole argument.
 
-**Metrics.** Accuracy is reported only so a calibration win is not mistaken for a
-capability win. The columns that decide whether a band is safe to route on:
+## Where this came from
 
-- **ECE** (expected calibration error): the n-weighted gap between promise and delivery.
-- **Brier**: accuracy and calibration in one number.
-- **AUROC**: rank quality, independent of calibration. A model can rank well and still lie
-  about its probabilities; this column separates those.
-- **coverage@95 / @99**: the fraction of traffic that can be auto-decided while holding
-  that precision on the auto-decided slice. This is the economic column, the one that says
-  how many human reviews you buy back.
+A quote goes out on a commercial job. Behind it sit drawings, equipment schedules,
+specifications, and three revisions of each. Someone is supposed to reread all of it before
+the quote is sent, and nobody has the hours.
 
-**Results.** See [RESULTS.md](RESULTS.md): Jev leads every column, and the 59-point coverage gap at equal-ish accuracy is the finding. Written from `score.py` output, never by hand.
+An AI can flag the places that do not line up. But a flag is only worth a reviewer's time if
+the number behind it means something. A model that says "80% sure" and is right 60% of the
+time sends your reviewer to the wrong cases and lets the expensive mistake through.
 
-## Stage 2: what does a reviewer hour buy?
+So before anything gets built on a model's confidence, this repository measures it.
 
-The calibration result only matters if it converts into something a buyer counts. Stage 2
-takes the same 398 cases, gives a reviewer a fixed budget of hours, and asks which cases
-they should open. Ranking by expected harm, P(wrong) x cost, beats a fixed confidence
-cutoff by 2x the budget on Jev's probabilities, and the same policy on a weaker arm's
-probabilities buys less, which is the calibration argument stated in hours instead of ECE.
+## What it gives you
 
-See [QUEUE.md](QUEUE.md). It replays `runs/*.jsonl` and spends nothing.
+- **One ranked list per policy**, so a reviewer can start at the top and stop when the
+  hours run out.
+- **A scoreboard on each list**: how many cases were really wrong, how much damage
+  opening them prevents.
+- **A limits panel on the screen**, with the same weight as the results: the costs are
+  synthetic, the reviewer is assumed perfect, the task is one benchmark, the direction is
+  measured and the size is not.
+- **A model switch**, so you can watch the list change when the probabilities are worse.
 
-## What this repo will not do
+The human still decides which cases to open.
 
-Gate on an unmeasured number. The production classifier this grew out of runs its
-0.8/0.5 bands **recorded but not gating** until a curve is fitted on labeled rows, and the
-same rule binds here. A demo that quietly thresholds at 0.8 because 0.8 sounds high is the
-exact failure the demo exists to teach against.
+## What it will not do
 
-## Reproduce
+- **Gate on an unmeasured number.** A threshold that sounds high is not a threshold that
+  has been checked. Thresholds here are recorded, never enforced, until a curve is fitted
+  on labeled rows.
+- **Dress the benchmark up as your data.** The cases are 400 public yes/no questions with
+  an answer key. The answer key is the only reason a number exists here; a demo on your
+  own documents could not be checked.
+- **Make the call.** It ranks. Someone accountable opens the case.
+
+## The numbers, plainly
+
+| question | answer | where |
+|---|---|---|
+| Does the model's confidence mean what it says? | One of three models does: it can auto-decide 95% of the queue at 95% precision. The other two manage 36% and 0%. | [RESULTS.md](RESULTS.md) |
+| What do four reviewer hours buy? | Spent on expected harm, they prevent about half the queue's damage. Spent on a fixed cutoff, about a sixth. 2,000 resamples, and expected harm wins in 96% of them. | [QUEUE.md](QUEUE.md) |
+| What does the screen show? | One labeled cost draw for the lists, the full 2,000-draw average for the counters, and why those are kept apart. | [DEMO-SPEC.md](DEMO-SPEC.md) |
+
+Every figure was written from script output, never by hand, and one command reproduces it:
+
+```
+python budget.py --replicates 2000
+```
+
+## Reproduce from scratch
 
 ```
 python fetch_boolq.py --n 400 --seed 0
@@ -74,16 +83,24 @@ python bakeoff.py jev  --n 400
 python bakeoff.py chat --n 400 --model google/gemini-2.5-flash-lite
 python bakeoff.py chat --n 400 --model openai/gpt-5-mini
 python score.py
+python budget.py --replicates 2000
+python export_demo.py --replicates 2000 && python build_demo.py
 ```
 
-Needs `OPENROUTER_API_KEY`. Total spend for the three arms was $0.265, nearly all of it gpt-5-mini. Runs are
-resumable: a dropped connection leaves a partial file and re-running appends the rest.
+The three model runs need `OPENROUTER_API_KEY` and cost $0.27 in total. Everything after
+`score.py` replays the recorded runs and spends nothing.
 
 ## Files
 
 | file | what it does |
 |---|---|
-| `fetch_boolq.py` | pulls the labeled sample from the HF datasets-server |
-| `bakeoff.py` | runs one arm, one row at a time, appending JSONL |
-| `score.py` | reports the table and the reliability bins; fits nothing, gates nothing |
-| `budget.py` | stage 2: spends a reviewer budget five ways over the recorded probabilities |
+| `demo.html` | the screen: hours dial, model switch, two lists, limits panel |
+| `budget.py` | spends a reviewer budget five ways over recorded probabilities |
+| `bakeoff.py` | asks each model the 400 questions and records its probability |
+| `score.py` | calibration table and reliability bins; fits nothing, gates nothing |
+| `fetch_boolq.py` | pulls the labeled sample |
+| `export_demo.py`, `build_demo.py` | turn the numbers and the template into `demo.html` |
+
+## License
+
+MIT
