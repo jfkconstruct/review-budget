@@ -1,0 +1,97 @@
+queue: 398 auto-decided cases shared by 3 arms
+budget: 4 reviewer hours = 40 reviews (10% of the queue), 6 min each
+costs: SYNTHETIC. 2000 replicates, each one a fresh cost draw over a fresh case bootstrap; ranges are 95% over replicates
+
+=== cost regime: uniform
+  arm                                policy         harm averted          95% range  errors caught
+  chat-google_gemini-2.5-flash-lite  random                9.1%      [2.1%, 17.9%]         4.0/44
+  chat-google_gemini-2.5-flash-lite  threshold            14.1%      [5.1%, 25.6%]         6.0/44
+  chat-google_gemini-2.5-flash-lite  uncertainty          17.8%      [8.3%, 29.3%]         8.0/44
+  chat-google_gemini-2.5-flash-lite  expected-harm        17.8%      [8.3%, 29.3%]         8.0/44
+  chat-google_gemini-2.5-flash-lite  oracle               90.5%    [71.4%, 100.0%]        40.0/44
+                                     vs threshold         +3.7% mean    [+0.0%, +10.8%]   won 100% of 1539 resamples [98%, 100%] -> wins
+                                        to match it, threshold needs a median 51 reviews (1.3x the budget, 5.1 h)
+                                     vs uncertainty  identical by construction in this regime
+
+  chat-openai_gpt-5-mini             random                3.2%      [0.0%, 10.5%]         1.0/32
+  chat-openai_gpt-5-mini             threshold            16.1%      [3.8%, 30.3%]         5.0/32
+  chat-openai_gpt-5-mini             uncertainty          20.0%      [7.1%, 34.2%]         6.0/32
+  chat-openai_gpt-5-mini             expected-harm        20.0%      [7.1%, 34.2%]         6.0/32
+  chat-openai_gpt-5-mini             oracle               99.5%    [93.0%, 100.0%]        32.0/32
+                                     vs threshold         +3.8% mean    [-7.1%, +14.8%]   won 82% of 1615 resamples [80%, 85%] -> wins
+                                        to match it, threshold needs a median 50 reviews (1.2x the budget, 5.0 h)
+                                     vs uncertainty  identical by construction in this regime
+
+  jev-typesafe_jev-1.13              random               14.2%      [0.0%, 29.2%]         4.0/25
+  jev-typesafe_jev-1.13              threshold            16.4%      [3.7%, 33.3%]         4.0/25
+  jev-typesafe_jev-1.13              uncertainty          38.1%     [20.8%, 56.5%]         9.0/25
+  jev-typesafe_jev-1.13              expected-harm        38.1%     [20.8%, 56.5%]         9.0/25
+  jev-typesafe_jev-1.13              oracle              100.0%   [100.0%, 100.0%]        25.0/25
+                                     vs threshold        +21.7% mean    [+0.0%, +45.0%]   won 98% of 1939 resamples [96%, 100%] -> wins
+                                        to match it, threshold needs a median 67 reviews (1.7x the budget, 6.7 h)
+                                     vs uncertainty  identical by construction in this regime
+
+=== cost regime: lognormal
+  arm                                policy         harm averted          95% range  errors caught
+  chat-google_gemini-2.5-flash-lite  random                9.3%      [0.4%, 31.8%]         4.0/44
+  chat-google_gemini-2.5-flash-lite  threshold            14.0%      [2.1%, 37.1%]         6.0/44
+  chat-google_gemini-2.5-flash-lite  uncertainty          17.6%      [3.7%, 42.0%]         8.0/44
+  chat-google_gemini-2.5-flash-lite  expected-harm        42.5%     [13.1%, 71.3%]         9.1/44
+  chat-google_gemini-2.5-flash-lite  oracle               98.3%    [92.7%, 100.0%]        40.0/44
+                                     vs threshold        +28.4% mean    [+1.3%, +61.1%]   won 98% of 1996 resamples [96%, 100%] -> wins
+                                        to match it, threshold needs a median 167 reviews (4.2x the budget, 16.7 h)
+                                     vs uncertainty      +24.9% mean    [-2.0%, +56.9%]   won 96% of 1998 resamples [94%, 98%] -> wins
+                                        to match it, uncertainty needs a median 90 reviews (2.2x the budget, 9.0 h)
+
+  chat-openai_gpt-5-mini             random                3.2%      [0.0%, 21.1%]         1.0/32
+  chat-openai_gpt-5-mini             threshold            15.9%      [1.7%, 43.4%]         5.0/32
+  chat-openai_gpt-5-mini             uncertainty          19.6%      [3.2%, 49.7%]         6.0/32
+  chat-openai_gpt-5-mini             expected-harm        33.3%      [2.6%, 70.0%]         4.9/32
+  chat-openai_gpt-5-mini             oracle               99.9%    [99.1%, 100.0%]        32.0/32
+                                     vs threshold        +17.4% mean    [-8.9%, +57.6%]   won 80% of 1945 resamples [78%, 82%] -> wins
+                                        to match it, threshold needs a median 93 reviews (2.3x the budget, 9.3 h)
+                                     vs uncertainty      +13.7% mean   [-10.1%, +54.4%]   won 69% of 1942 resamples [67%, 71%] -> wins
+                                        to match it, uncertainty needs a median 80 reviews (2.0x the budget, 8.0 h)
+
+  jev-typesafe_jev-1.13              random               14.1%      [0.0%, 45.7%]         4.0/25
+  jev-typesafe_jev-1.13              threshold            16.4%      [0.7%, 49.7%]         4.0/25
+  jev-typesafe_jev-1.13              uncertainty          37.8%     [10.8%, 71.9%]         9.0/25
+  jev-typesafe_jev-1.13              expected-harm        50.9%     [11.4%, 82.7%]         6.6/25
+  jev-typesafe_jev-1.13              oracle              100.0%   [100.0%, 100.0%]        25.0/25
+                                     vs threshold        +34.5% mean    [-4.8%, +74.4%]   won 96% of 1996 resamples [94%, 98%] -> wins
+                                        to match it, threshold needs a median 82 reviews (2.0x the budget, 8.2 h)
+                                     vs uncertainty      +13.2% mean   [-17.7%, +59.0%]   won 69% of 1982 resamples [67%, 71%] -> wins
+                                        to match it, uncertainty needs a median 56 reviews (1.4x the budget, 5.6 h)
+
+=== cost regime: adversarial
+  arm                                policy         harm averted          95% range  errors caught
+  chat-google_gemini-2.5-flash-lite  random                9.1%      [0.3%, 31.2%]         4.0/44
+  chat-google_gemini-2.5-flash-lite  threshold            11.4%      [1.5%, 31.5%]         6.0/44
+  chat-google_gemini-2.5-flash-lite  uncertainty          14.7%      [3.0%, 38.0%]         8.0/44
+  chat-google_gemini-2.5-flash-lite  expected-harm        39.8%     [11.2%, 69.8%]         8.6/44
+  chat-google_gemini-2.5-flash-lite  oracle               98.4%    [92.9%, 100.0%]        40.0/44
+                                     vs threshold        +28.4% mean    [+0.7%, +60.9%]   won 98% of 1997 resamples [96%, 100%] -> wins
+                                        to match it, threshold needs a median 168 reviews (4.2x the budget, 16.8 h)
+                                     vs uncertainty      +25.0% mean    [-2.4%, +57.5%]   won 96% of 1999 resamples [94%, 98%] -> wins
+                                        to match it, uncertainty needs a median 91 reviews (2.3x the budget, 9.1 h)
+
+  chat-openai_gpt-5-mini             random                3.0%      [0.0%, 19.4%]         1.0/32
+  chat-openai_gpt-5-mini             threshold            14.4%      [1.5%, 40.7%]         5.0/32
+  chat-openai_gpt-5-mini             uncertainty          18.4%      [2.8%, 48.4%]         6.0/32
+  chat-openai_gpt-5-mini             expected-harm        30.0%      [0.0%, 67.8%]         4.4/32
+  chat-openai_gpt-5-mini             oracle               99.9%    [99.1%, 100.0%]        32.0/32
+                                     vs threshold        +15.6% mean   [-10.3%, +57.0%]   won 76% of 1947 resamples [74%, 78%] -> wins
+                                        to match it, threshold needs a median 87 reviews (2.2x the budget, 8.7 h)
+                                     vs uncertainty      +11.6% mean   [-10.5%, +53.5%]   won 64% of 1952 resamples [62%, 66%] -> wins
+                                        to match it, uncertainty needs a median 65 reviews (1.6x the budget, 6.5 h)
+
+  jev-typesafe_jev-1.13              random               12.3%      [0.0%, 41.2%]         4.0/25
+  jev-typesafe_jev-1.13              threshold            15.6%      [0.6%, 48.9%]         4.0/25
+  jev-typesafe_jev-1.13              uncertainty          32.3%      [8.8%, 67.2%]         9.0/25
+  jev-typesafe_jev-1.13              expected-harm        46.3%      [8.7%, 80.9%]         6.0/25
+  jev-typesafe_jev-1.13              oracle              100.0%   [100.0%, 100.0%]        25.0/25
+                                     vs threshold        +30.7% mean    [-7.1%, +71.9%]   won 94% of 1991 resamples [92%, 96%] -> wins
+                                        to match it, threshold needs a median 80 reviews (2.0x the budget, 8.0 h)
+                                     vs uncertainty      +14.0% mean   [-18.6%, +60.7%]   won 69% of 1993 resamples [67%, 71%] -> wins
+                                        to match it, uncertainty needs a median 58 reviews (1.4x the budget, 5.8 h)
+

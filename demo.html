@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Review Budget</title>
+<meta name="description" content="Same reviewer hours, pointed differently: which cases a review queue opens, and what the choice prevents.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<!-- gallery-style: aurelius-workflow -->
+<style>
+:root{
+  --ru: 12px;
+  --bg: #FFFFFF;
+  --ink: #233534;
+  --muted: #5B6B69;
+  --rule: #E7ECEB;
+  --dot-green: #1F9A52;
+  --dot-red: #FF4B3E;
+  --dot-gold: #B9922E;
+  --dot-blue: #9FB1BC;
+  --dot-beige: #E7E0D9;
+  /* Text-safe darkening of the alert dot: the dot colours run 3.4:1 at best on white,
+     so a dot colour is never reused as type. #B3261E is 6.5:1. */
+  --text-red: #B3261E;
+  --pad-x: clamp(20px, 6vw, 120px);
+  --scale: 1;
+}
+/* Type scales are clamp()-based per the module's no-breakpoint technique; --scale is
+   the projection-mode multiplier layered on top, not a replacement for it. */
+*{ box-sizing: border-box; }
+html{ -webkit-text-size-adjust: 100%; }
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: calc(15px * var(--scale));
+  line-height: 1.55;
+  font-weight: 400;
+}
+body.projection{ --scale: 1.28; }
+.serif{ font-family: Newsreader, ui-serif, Georgia, Cambria, "Times New Roman", serif; font-weight: 500; }
+.muted{ color: var(--muted); }
+.rule{ border-bottom: 1px solid var(--rule); }
+.page{
+  padding-left: max(var(--pad-x), env(safe-area-inset-left));
+  padding-right: max(var(--pad-x), env(safe-area-inset-right));
+  padding-bottom: calc(var(--ru) * 6 + env(safe-area-inset-bottom));
+  max-width: 1180px;
+  margin: 0 auto;
+}
+section{ margin-top: calc(var(--ru) * 5); scroll-margin-top: 180px; }
+.label{
+  font-size: calc(11px * var(--scale));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+.dot{ display: inline-block; width: 0.72em; height: 0.72em; border-radius: 50%; flex: none; }
+.skip{
+  position: absolute; left: -9999px; top: 0; background: var(--ink); color: #fff;
+  padding: 10px 16px; z-index: 20;
+}
+.skip:focus{ left: 8px; top: calc(8px + env(safe-area-inset-top)); }
+
+/* ---------------------------------------------------------------- header */
+header.top{
+  padding-top: calc(var(--ru) * 3 + env(safe-area-inset-top));
+  padding-bottom: calc(var(--ru) * 1.5);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
+}
+.brand{ font-size: calc(clamp(24px, 3vw, 30px) * var(--scale)); line-height: 1.1; }
+.top nav{ display: flex; align-items: center; gap: 18px; }
+
+/* ---------------------------------------------------------------- hero */
+h1{
+  font-family: Newsreader, ui-serif, Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(27px, 4.4vw, 50px);
+  line-height: 1.12;
+  margin: calc(var(--ru) * 3) 0 0;
+  max-width: 24ch;
+}
+.lede{ margin-top: 16px; max-width: 62ch; font-size: calc(16px * var(--scale)); color: var(--muted); }
+
+/* ---------------------------------------------------------------- controls */
+.controls{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  padding-top: calc(var(--ru) * 1.5 + env(safe-area-inset-top));
+  padding-bottom: calc(var(--ru) * 1.5);
+  margin-top: calc(var(--ru) * 5);
+}
+.ctl-grid{ display: grid; gap: calc(var(--ru) * 2); grid-template-columns: 1fr; }
+@media (min-width: 860px){ .ctl-grid{ grid-template-columns: 1.15fr 1fr 1fr; align-items: start; } }
+.ctl-head{ display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ctl-value{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(17px, 1.7vw, 20px) * var(--scale)); }
+.dial{ display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+input[type=range]{ flex: 1 1 auto; min-width: 0; accent-color: var(--ink); height: 32px; }
+button{
+  font: inherit; color: var(--ink); background: transparent;
+  border: 1px solid var(--rule); border-radius: 2px; cursor: pointer;
+  padding: 8px 14px; min-height: 44px;
+}
+button:hover:not(:disabled){ border-color: var(--muted); }
+button:disabled{ color: #9AA7A5; border-color: #F2F5F4; cursor: not-allowed; }
+.step{ width: 44px; padding: 0; font-size: calc(17px * var(--scale)); line-height: 1; }
+:focus-visible{ outline: 2px solid var(--ink); outline-offset: 2px; }
+.seg{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.seg [role=radio]{ padding: 8px 12px; min-height: 44px; }
+.seg [role=radio][aria-checked=true]{
+  background: var(--ink); color: #fff; border-color: var(--ink);
+}
+.hint{ margin-top: 8px; font-size: calc(12px * var(--scale)); color: var(--muted); }
+
+/* ---------------------------------------------------------------- rows */
+.row{
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  padding: calc(var(--ru) * 1.4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.row:last-child{ border-bottom: 0; }
+.row-name{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(20px, 2.4vw, 26px) * var(--scale)); line-height: 1.15; }
+.row-num{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(20px, 2.4vw, 26px) * var(--scale)); margin-left: auto; font-variant-numeric: tabular-nums; }
+.row-note{ flex: 1 1 22ch; max-width: 68ch; color: var(--muted); font-size: calc(13.5px * var(--scale)); }
+.lead-row .row-name, .lead-row .row-num{ font-size: calc(clamp(26px, 3.4vw, 36px) * var(--scale)); }
+
+/* ---------------------------------------------------------------- lists */
+.lists{ display: grid; gap: calc(var(--ru) * 3); grid-template-columns: 1fr; margin-top: calc(var(--ru) * 2); }
+@media (min-width: 860px){ .lists{ grid-template-columns: 1fr 1fr; gap: calc(var(--ru) * 4); } }
+.list-head{ border-bottom: 1px solid var(--ink); padding-bottom: 8px; }
+.list-title{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(19px, 2vw, 23px) * var(--scale)); }
+.list-score{
+  margin: 10px 0 0; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+  font-size: calc(13.5px * var(--scale)); color: var(--muted);
+}
+.list-score strong{ color: var(--ink); font-weight: 500; }
+.case{ display: flex; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+.case-rank{ color: var(--muted); font-variant-numeric: tabular-nums; font-size: calc(12px * var(--scale)); min-width: 2.2em; }
+.case-q{ font-size: calc(clamp(13.5px, 1.1vw, 15px) * var(--scale)); line-height: 1.45; }
+.case-meta{ color: var(--muted); font-size: calc(12px * var(--scale)); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.was-wrong{ color: var(--text-red); font-weight: 500; }
+.was-right{ color: var(--muted); }
+.disclose{ margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; }
+.chev{ transition: transform 160ms ease; display: inline-block; }
+[aria-expanded=true] .chev{ transform: rotate(90deg); }
+.empty{ color: var(--muted); padding: 14px 0; font-size: calc(13.5px * var(--scale)); }
+
+/* ---------------------------------------------------------------- limits */
+.limits{ border-top: 2px solid var(--ink); padding-top: calc(var(--ru) * 1.5); }
+
+footer{ margin-top: calc(var(--ru) * 6); border-top: 1px solid var(--rule); padding-top: calc(var(--ru) * 2); color: var(--muted); font-size: calc(13px * var(--scale)); }
+code{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; background: #F5F7F7; padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+a{ color: var(--ink); }
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#controls">Skip to the controls</a>
+<div class="page">
+
+  <header class="top rule">
+    <div class="serif brand">Review Budget</div>
+    <nav>
+      <span class="label">Field demo &middot; 2026-09-19</span>
+      <button id="projection" aria-pressed="false">Projection mode</button>
+    </nav>
+  </header>
+
+  <section id="top">
+    <h1>Four reviewer hours can avert a sixth of your queue&rsquo;s damage, or half of it.</h1>
+    <p class="lede">
+      Same hours, same queue, same people. The only difference is the order the cases are
+      opened in. Drag the dial and watch which cases each policy puts in front of a human.
+    </p>
+    <p class="lede">
+      <strong>What the queue is, plainly:</strong> 398 questions a language model answered
+      on its own, from a public benchmark that ships a correct answer for every row. The
+      answer key is the whole reason a number exists here. A demo run on your own documents
+      would output a confident ranked list nobody could check, which is the failure this
+      page argues against.
+    </p>
+  </section>
+
+  <section class="controls" id="controls" aria-label="Demo controls">
+    <div class="ctl-grid">
+
+      <div>
+        <div class="ctl-head">
+          <span class="label" id="hours-label">Reviewer budget</span>
+          <span class="ctl-value" id="hours-value">4 hours</span>
+        </div>
+        <div class="dial">
+          <button class="step" id="hours-down" aria-label="Fewer reviewer hours">&minus;</button>
+          <input type="range" id="hours" min="0" max="8" step="1" value="4"
+                 aria-labelledby="hours-label" aria-describedby="hours-desc"
+                 aria-valuetext="4 hours, 40 reviews">
+          <button class="step" id="hours-up" aria-label="More reviewer hours">+</button>
+        </div>
+        <div class="hint" id="hours-desc">Stop 5 of 9 &middot; 40 reviews at 6 minutes each, 10% of the queue</div>
+      </div>
+
+      <div>
+        <div class="ctl-head"><span class="label" id="arm-label">Model behind the queue</span></div>
+        <div class="seg" role="radiogroup" aria-labelledby="arm-label" id="arm"></div>
+        <div class="hint">Each model rewrites the list: the policy is identical, the probabilities are not.</div>
+      </div>
+
+      <div>
+        <div class="ctl-head"><span class="label" id="regime-label">Cost shape</span></div>
+        <div class="seg" role="radiogroup" aria-labelledby="regime-label" id="regime"></div>
+        <div class="hint" id="regime-hint">Invented, not measured. Three shapes, all reported.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="buys" aria-live="polite">
+    <div class="label">What the budget buys &middot; <span id="buys-sub">4 reviewer hours</span></div>
+    <div id="rows"></div>
+    <p class="hint" id="caught-line"></p>
+  </section>
+
+  <section id="which">
+    <div class="label">Which cases do you open today?</div>
+    <p class="lede" id="overlap-line"></p>
+    <div class="lists">
+      <div>
+        <div class="list-head">
+          <div class="list-title">Ranked by expected harm</div>
+          <div class="hint">P(wrong) &times; what the mistake costs</div>
+        </div>
+        <div id="list-eh"></div>
+        <button class="disclose" id="more-eh" aria-expanded="false" aria-controls="list-eh">
+          <span class="chev" aria-hidden="true">&rsaquo;</span><span id="more-eh-text"></span>
+        </button>
+      </div>
+      <div>
+        <div class="list-head">
+          <div class="list-title">Ranked by a fixed confidence cutoff</div>
+          <div class="hint">Everything under the cutoff, worked in arrival order</div>
+        </div>
+        <div id="list-th"></div>
+        <button class="disclose" id="more-th" aria-expanded="false" aria-controls="list-th">
+          <span class="chev" aria-hidden="true">&rsaquo;</span><span id="more-th-text"></span>
+        </button>
+      </div>
+    </div>
+    <p class="hint">
+      <span class="dot" style="background:var(--dot-red)"></span> the model got this one
+      wrong &nbsp;
+      <span class="dot" style="background:var(--dot-beige)"></span> the model got it right,
+      so the hour bought nothing. Outcomes come from the answer key and are known only
+      after the fact, never to the ranker.
+    </p>
+  </section>
+
+  <section id="limits" class="limits">
+    <div class="label">What this does not prove</div>
+    <div id="limit-rows">
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">Costs are invented</span>
+        <span class="row-note">Benchmark rows carry no dollar value. Three shapes run and all three are on the dial, because the shape of the cost distribution is a claim, not a measurement.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">Direction, not magnitude</span>
+        <span class="row-note" id="limit-direction"></span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">The interval has a knob in it</span>
+        <span class="row-note">Replicate count is a setting, so these ranges narrow without a single new labelled case arriving. They describe resampling of this 398-case queue and nothing wider.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">The reviewer is perfect</span>
+        <span class="row-note">Every wrong case a human opens is assumed fixed. That is an upper bound, applied identically to all five policies, so it flatters the rows equally.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">One task, one benchmark</span>
+        <span class="row-note">398 yes/no reading-comprehension questions. Nothing here has been shown to transfer to claims, tickets, or moderation without repeating the measurement on that data.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">The lists are one draw</span>
+        <span class="row-note">The two columns above use a single cost draw, because an average of 2000 draws is not a list you can read. The numbers under &ldquo;what the budget buys&rdquo; are the 2000-draw bootstrap, never this one.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      Every number on this page comes out of
+      <code>python budget.py --replicates 2000</code>, which calls no
+      API and replays a stored run. The write-up with the intervals and the sign tests is
+      <code>QUEUE.md</code>; the bake-off behind the probabilities is <code>RESULTS.md</code>.
+    </p>
+    <p id="stamp"></p>
+    <p>Built by Josiah Bujanda. More of the work: <a href="https://josiahbujanda.com">josiahbujanda.com</a>.</p>
+  </footer>
+</div>
+
+<script id="demo-data" type="application/json">{"meta":{"generated":"2026-09-19","replicates":2000,"review_minutes":6.0,"n_cases":398,"budget_hours":[0.5,1,2,3,4,6,8,10,12],"budget_k":[5,10,20,30,40,60,80,100,120],"policies":["random","threshold","uncertainty","expected-harm","oracle"],"regimes":["uniform","lognormal","adversarial"],"arm_order":["jev-typesafe_jev-1.13","chat-openai_gpt-5-mini","chat-google_gemini-2.5-flash-lite"],"arm_labels":{"chat-google_gemini-2.5-flash-lite":"gemini-2.5-flash-lite","chat-openai_gpt-5-mini":"gpt-5-mini","jev-typesafe_jev-1.13":"Jev 1.13"}},"ids":["boolq-0000","boolq-0001","boolq-0002","boolq-0003","boolq-0004","boolq-0005","boolq-0006","boolq-0007","boolq-0008","boolq-0009","boolq-0010","boolq-0011","boolq-0012","boolq-0013","boolq-0014","boolq-0015","boolq-0016","boolq-0017","boolq-0018","boolq-0019","boolq-0020","boolq-0021","boolq-0022","boolq-0023","boolq-0024","boolq-0025","boolq-0027","boolq-0028","boolq-0029","boolq-0030","boolq-0031","boolq-0032","boolq-0033","boolq-0034","boolq-0035","boolq-0036","boolq-0037","boolq-0038","boolq-0039","boolq-0040","boolq-0041","boolq-0042","boolq-0043","boolq-0044","boolq-0045","boolq-0046","boolq-0047","boolq-0048","boolq-0049","boolq-0050","boolq-0051","boolq-0052","boolq-0053","boolq-0054","boolq-0055","boolq-0056","boolq-0057","boolq-0058","boolq-0059","boolq-0060","boolq-0061","boolq-0062","boolq-0063","boolq-0064","boolq-0065","boolq-0066","boolq-0067","boolq-0068","boolq-0069","boolq-0070","boolq-0071","boolq-0072","boolq-0073","boolq-0074","boolq-0075","boolq-0076","boolq-0077","boolq-0078","boolq-0079","boolq-0080","boolq-0081","boolq-0082","boolq-0083","boolq-0084","boolq-0085","boolq-0086","boolq-0087","boolq-0088","boolq-0089","boolq-0090","boolq-0091","boolq-0092","boolq-0093","boolq-0094","boolq-0095","boolq-0096","boolq-0097","boolq-0098","boolq-0099","boolq-0100","boolq-0101","boolq-0102","boolq-0103","boolq-0104","boolq-0105","boolq-0106","boolq-0107","boolq-0108","boolq-0109","boolq-0110","boolq-0111","boolq-0112","boolq-0113","boolq-0114","boolq-0115","boolq-0116","boolq-0117","boolq-0118","boolq-0119","boolq-0120","boolq-0121","boolq-0122","boolq-0123","boolq-0124","boolq-0125","boolq-0126","boolq-0127","boolq-0128","boolq-0129","boolq-0130","boolq-0131","boolq-0132","boolq-0133","boolq-0134","boolq-0135","boolq-0136","boolq-0137","boolq-0138","boolq-0139","boolq-0140","boolq-0141","boolq-0142","boolq-0143","boolq-0144","boolq-0145","boolq-0146","boolq-0147","boolq-0148","boolq-0149","boolq-0150","boolq-0151","boolq-0152","boolq-0153","boolq-0154","boolq-0155","boolq-0156","boolq-0157","boolq-0158","boolq-0159","boolq-0160","boolq-0161","boolq-0162","boolq-0163","boolq-0164","boolq-0165","boolq-0166","boolq-0167","boolq-0168","boolq-0169","boolq-0170","boolq-0171","boolq-0172","boolq-0173","boolq-0174","boolq-0175","boolq-0176","boolq-0177","boolq-0178","boolq-0179","boolq-0180","boolq-0181","boolq-0182","boolq-0183","boolq-0184","boolq-0185","boolq-0186","boolq-0187","boolq-0188","boolq-0189","boolq-0190","boolq-0191","boolq-0192","boolq-0193","boolq-0194","boolq-0195","boolq-0196","boolq-0197","boolq-0198","boolq-0199","boolq-0200","boolq-0201","boolq-0202","boolq-0203","boolq-0204","boolq-0205","boolq-0206","boolq-0207","boolq-0208","boolq-0209","boolq-0210","boolq-0211","boolq-0212","boolq-0213","boolq-0214","boolq-0216","boolq-0217","boolq-0218","boolq-0219","boolq-0220","boolq-0221","boolq-0222","boolq-0223","boolq-0224","boolq-0225","boolq-0226","boolq-0227","boolq-0228","boolq-0229","boolq-0230","boolq-0231","boolq-0232","boolq-0233","boolq-0234","boolq-0235","boolq-0236","boolq-0237","boolq-0238","boolq-0239","boolq-0240","boolq-0241","boolq-0242","boolq-0243","boolq-0244","boolq-0245","boolq-0246","boolq-0247","boolq-0248","boolq-0249","boolq-0250","boolq-0251","boolq-0252","boolq-0253","boolq-0254","boolq-0255","boolq-0256","boolq-0257","boolq-0258","boolq-0259","boolq-0260","boolq-0261","boolq-0262","boolq-0263","boolq-0264","boolq-0265","boolq-0266","boolq-0267","boolq-0268","boolq-0269","boolq-0270","boolq-0271","boolq-0272","boolq-0273","boolq-0274","boolq-0275","boolq-0276","boolq-0277","boolq-0278","boolq-0279","boolq-0280","boolq-0281","boolq-0282","boolq-0283","boolq-0284","boolq-0285","boolq-0286","boolq-0287","boolq-0288","boolq-0289","boolq-0290","boolq-0291","boolq-0292","boolq-0293","boolq-0294","boolq-0295","boolq-0296","boolq-0297","boolq-0298","boolq-0299","boolq-0300","boolq-0301","boolq-0302","boolq-0303","boolq-0304","boolq-0305","boolq-0306","boolq-0307","boolq-0308","boolq-0309","boolq-0310","boolq-0311","boolq-0312","boolq-0313","boolq-0314","boolq-0315","boolq-0316","boolq-0317","boolq-0318","boolq-0319","boolq-0320","boolq-0321","boolq-0322","boolq-0323","boolq-0324","boolq-0325","boolq-0326","boolq-0327","boolq-0328","boolq-0329","boolq-0330","boolq-0331","boolq-0332","boolq-0333","boolq-0334","boolq-0335","boolq-0336","boolq-0337","boolq-0338","boolq-0339","boolq-0340","boolq-0341","boolq-0342","boolq-0343","boolq-0344","boolq-0345","boolq-0346","boolq-0347","boolq-0348","boolq-0349","boolq-0350","boolq-0351","boolq-0352","boolq-0353","boolq-0354","boolq-0355","boolq-0356","boolq-0357","boolq-0358","boolq-0359","boolq-0360","boolq-0361","boolq-0362","boolq-0363","boolq-0364","boolq-0365","boolq-0366","boolq-0367","boolq-0368","boolq-0369","boolq-0370","boolq-0371","boolq-0372","boolq-0373","boolq-0374","boolq-0375","boolq-0376","boolq-0377","boolq-0378","boolq-0379","boolq-0380","boolq-0381","boolq-0382","boolq-0383","boolq-0384","boolq-0385","boolq-0386","boolq-0387","boolq-0388","boolq-0389","boolq-0390","boolq-0391","boolq-0392","boolq-0393","boolq-0394","boolq-0395","boolq-0396","boolq-0397","boolq-0398","boolq-0399"],"questions":["do numbers look the same in all languages","has a school shooting happened in a private school","can an odd number be divided by an even number","is there a difference between hydroxyzine hcl and hydroxyzine pam","do all triangles have at least two acute angles","has anyone come back from 3-0 in the nba finals","is the toyota highlander on a truck frame","will there be a season 5 the 100","is there a military base in san diego","is there a disorder for being obsessed with someone","is the enchanted forest in oregon still open","is a pickle the same as a gherkin","did indian football team qualified for fifa 2018","has anyone won the grand slam in golf","is there a golf course at the indy 500","was chasing cars written for grey's anatomy","do supreme court justices have to be confirmed","was eye of the tiger written for rocky","can a glass window break on its own","is a cape and a cloak the same","is there a border between england and scotland","did the game of thrones theme song change","does beau abbott die in a quiet place","did murphy brown have a baby on the show","is there a bird faster than a cheetah","is a father in law considered a relative","are t rex and tyrannosaurus rex the same","is the three little pigs a nursery rhyme","is the book the outsiders based on a true story","is there a difference in structure of the two atria","can you own a skunk in the uk","is the cast of mama mia the same","did the queen have any brothers or sisters","has wisconsin ever been in the little league world series","is the cortex of the cerebellum gray matter","can you put 700c tires on a 29er","is the shape of water movie based on a book","is i can only imagine based on a true story","can one travel faster than the speed of light","can you take the money in who wants to be a millionaire","is an administrative law judge a real judge","does the size of a rain gauge matter","is northern ireland part of the great britain","can the world cup final be decided on penalties","does a fried egg have a runny yolk","is david from love it or list it a real realtor","is outcome variable the same as dependent variable","is there a belt above black in karate","is navel and belly button the same thing","has a t rex skull ever been found","does a spark plug keep an engine running","did they use a real gorilla in mighty joe young","are the make it or break it cast real gymnasts","can you open carry in nc with a concealed permit","can you buy alcohol on sunday in wi","does the uk use a 24 hour clock","is st augustine the oldest city in florida","is there a post credit scene in ifinity war","did the titanic sink on its maiden voyage","is australian sign language the same as american","do alligators drown their prey and eat it later","is devil may cry 5 set after 2","can an act be a tort and a crime","is the white cover on brie cheese edible","is there a group called the five heartbeats","is the army under the department of defense","are fear the walking dead and the walking dead related","is the liver a part of the gi tract","did christine and the phantom have a son","is night of the hunter a film noir","do penguins have feathers arising from the epidermis","is there a difference between muay thai and thai boxing","does the monorail go to las vegas airport","does the sun orbit around the milky way","did deion sanders ever win a world series","is new jersey a suburb of new york city","is there a tiebreaker in final set at wimbledon","is the rampage movie based on the game","is the drinking age different in every state","is season 4 of better call saul out","was egypt a part of the ottoman empire","does the sahara desert in northern africa help south americas amazon rainforest grow","is there a season 7 of the sopranos","does the dorsal root ganglion carry sensory input","is pain experienced in a missing body part or paralyzed area","is the united states a part of the european union","will there be a second season of 11.22.63","is a boston terrier a small breed dog","can an emt-basic start an iv","is nfs carbon a sequel to most wanted","does the boy die in the book of henry","is there a movie with 0 on rotten tomatoes","did arizona die in season 8 of grey's anatomy","can carbon form polar covalent bonds with hydrogen","does david brooks still write for ny times","can you take a right turn on a red light","do all ni numbers have a letter at the end","has washington capitals ever won the stanley cup","is there any train between india and pakistan","did ireland qualify for the 2018 world cup","do the runners up on survivor win money","can you get the death penalty as a minor","is fate and the furious the last movie","is the dog from little rascals still alive","is an ace 2 3 4 5 a straight","is dragon fruit and pitaya the same thing","do competitive inhibitors bind to the active site","do you need to break in a car","is language the only criteria of classifying state in india","was the sears tower the tallest building in the world","was the lizzie mcguire movie filmed in rome","does a frog jump out of boiling water","is air canada part of one world alliance","is house tax and property tax are same","is there a season 2 of medici masters of florence","does the president live in the white house","is the dot product of two vectors a scalar","are ncaa and nba balls the same size","are there nuclear power plants in the us","is the old panama canal still in use","is a fire 7 the same as a kindle","was the tiger really on the boat in life of pi","can a nas be used as a server","is george washington university an ivy league school","can you wear your letterman after high school","can anyone give last rites in an emergency","is it bad to wash your hair with shower gel","does any structure separate the abdominal cavity and pelvic cavity","does bailey die in a dog's purpose","were the twin towers the world trade center","is there going to be another golden compass movie","is there a play off for third place in the world cup","is britain still a member of european union","is the queen's birthday a public holiday in victoria","is israel part of the european economic area","is 22 magnum and 22 wmr the same","can you score from a throw in in soccer","can you play soccer on a football field","do u get paid to be on survivor","do donna and eric end up getting married","is tess carroll died in charlie st cloud","will there be a new spartacus season 5","has tampa ever been hit by a hurricane","did us ever win the world cup soccer","is there going to be a season 3 for daredevil","are there any states that do not have a seat belt law","is the guy from deception really a twin","does the united states have a federal system of government","is the other boleyn girl part of a series","is national and enterprise car rental the same company","is victoria plum the same as victorian plumbing","is there such thing as over drinking water","is petroleum an example of a fossil fuel","is france the same timezone as the uk","is there such a thing as brain freeze","is the indian motorcycle made in united states","do you pay tax on gambling winnings in australia","is a wheel and axle a simple machine","is the son of beast still at kings island","is an engine speed sensor the same as a crankshaft sensor","is there a difference between 2 cycle and 2 stroke","do you have to have a wicket keeper in cricket","are the marvel tv shows in the mcu","have scotland ever been in the world cup final","did to kill a mockingbird win an academy award","are all eyeglasses made by the same company","is a tablespoon bigger than a dessert spoon","are dachshunds and weiner dogs the same thing","is there going to be a jack reacher 2","is indiana jones temple of doom a prequel","do you qualify for the world cup if you host it","has anyone won more than one congressional medal of honor","is the show bloodline based on a true story","is a german shepard the same as an alsatian","is europe a part of the united states","have the capitals ever win the stanley cup","is it possible to type 200 words per minute","is st andrews university in the russell group","is there such thing as a dominant eye","is there a sequel to the movie the golden compass","is antarctica the same as the south pole","is a bumble bee the same as a carpenter bee","did the girl in the lost world die","does elena die for good in vampire diaries","does enameled cast iron leach iron into food","is there a sequel to love finds a home","does latent heat of vaporization change with temperature","does maple syrup come straight from the tree","is city of industry in los angeles county","is there an age limit to compete in the olympics","will there be a season 7 of puss in boots on netflix","is harry potter and the escape from gringotts a roller coaster ride","can there be a word without a vowel","can trucks go on the taconic state parkway","is there a congestion charge in london on sunday","is a markup language designed to describe data","does deadpool have a kid in the comics","did anyone from the 1980 us hockey team play in the nhl","does battlefield 1 have a single player campaign","are the mountains in utah part of the rockies","is sheet metal gauge the same as wire gauge","is columbus day a national holiday in the united states","did mariah carey wrote all i want for christmas is you","is breaking and entering into a car a felony","is fantastic beasts and where to find them a prequel","are all the members of the band still alive","do they still have fox hunts in england","is there going to be any more pirates of the caribbean films","does the us court of appeals have original jurisdiction","is pureed tomatoes the same as tomato sauce","is ncis new orleans over for the season","are there going to be any more i am number four movies","can you get more than one varsity letter","is this the last season of bunk'd","do adjectives have to come before a noun","can you have too much oxygen in your body","do you win chess by taking the queen","do straights have to be the same suit","is there a movie the handmaid's tale","can minors drink with parents in new york","is a title and registration the same thing","will there be another now you see me movie","is there a chinatown in st louis mo","does density depend on the type of material","was integration the rule in the northern states","is the jaguar s type rear wheel drive","is there a right and left brachiocephalic artery","is it 5 portions of fruit and 5 of vegetables","is the human torch the same guy as captain america","is there a player in the nfl missing a hand","is durham university part of the russell group","is season 5 of the originals the series finale","does the animal cell have a cell membrane","can you drink alcohol with your parents in wisconsin","did william the conqueror have a legitimate claim to the english throne","is scar alive in the lion king 2","is the port mann bridge a toll bridge","is the vice president the president of the senate","is there an official release date for the last airbender 2","is the walking dead same as fear the walking dead","will there be a season 8 of vampire diaries","can you score off a throw in in soccer","did england host the world cup in 1966","can you wear short sleeve shirt with asu jacket","can i get into canada with a military id","is there a state where the drinking age is 18","is there a season 4 of crazy ex girlfriend","was the king and i based on a true story","is there a sequel to the movie i am four","is let there be light a true story","is the us womens soccer team in the world cup","is barq's root beer a pepsi product","will there be a second season of discovery","is the tv show the resident over for the season","does the vegas golden knights have a captain","do bees die if they lose their stinger","do the internal intercostal muscles contract during inspiration","is there a sequel to hunter x hunter","has no 1 court at wimbledon got a roof","is it illegal for a minor to be in possession of alcohol","is the wizarding world of harry potter in islands of adventure","is the liver part of the excretory system","has there ever been a movie rated nc-17","does it cost money to renounce us citizenship","did the astros used to be in the national league","is there such a thing as a floating island","was the color purple based on a true story","is there a season 9 of pretty little liars","can ingrown toenails come back after being removed","did the pirates of the caribbean ride come first","is it possible to create mass from energy","are there actual bodies in the tomb of the unknown soldier","is all of new zealand in the same time zone","is there silver in a 1971 silver dollar","is it possible to have no sense of smell","can u drive in canada with us license","is the singer from blur in the gorillaz","is the speed of sound constant for all materials","is new zealand on the continent of australia","do they celebrate father's day in the netherlands","is mount everest a part of the himalayas","can you build up an immunity to arsenic","is there an interstate that goes coast to coast","did they change laurie in that 70s show","is women's college world series double elimination","does penne alla vodka have dairy in it","can the fa cup final end in a tie","are liquor stores open on memorial day oklahoma","is journey 2 the mysterious island a sequel","are st bernards and bernese mountain dogs related","is an agm battery a sealed lead acid battery","is denatured alcohol and acetone the same thing","is the united states part of the commonwealth of nations","has a woman ever played minor league baseball","is song of solomon the same as song of songs","is wrath of the titans a sequel to clash of the titans","does magnesium citrate have citric acid in it","will all xbox 360 games work on xbox one","is baylor and mary hardin baylor the same school","does only the winner get money on tipping point","is there any next part of avengers infinity war","is there a season 4 of bad education","are you required to complete the american community survey","was the movie strangers based on a true story","is angular frequency and angular velocity the same","can someone die from a bullet shot in the air","is anne with an e filmed on pei","will there be a season 3 of here come the habibs","is health care free in the united states","is there a difference between doves and pigeons","can root 2 be written as a fraction","is profit and loss account same as income statement","is grey's anatomy filmed at a real hospital","is z nation a spinoff of the walking dead","does the navy have a delayed entry program","does smeagol die in lord of the rings","is the berlin wall the same as the berlin blockade","is it true that ethiopia has 13 months","did the titanic sank on its maiden voyage","is new england baptist hospital a teaching hospital","did michael and pam date on the office","was there helicopters in the second world war","is father's day the same day every year","do radio waves travel at the speed of light","does majora's mask have a time limit","is chewing tobacco banned in major league baseball","does 1 ball and 1 lucky star win euromillions","does damon and elena get together in season 3","does one sister chromatid have half the dna of a chromosome","is the barber of seville a true story","is thread seal tape and teflon tape the same","are new balance and nike the same company","is there such a thing as a turkey vulture","can you run on a dropped third strike in little league","is blue cross blue shield a managed care organization","do blue and pink cotton candy taste the same","are public limited companies in the private sector","is powdered milk the same as milk powder","is there a season 3 of indian summers","is salt lake city the biggest city in utah","is federal income tax the same as social security","did they cancel whose line is it anyway","were there any survivors in the pompeii eruption","is the routing number the same as transit number","is metal gear rising related to metal gear solid","is cheaper by the dozen based on a true story","does ethanol take more energy make that produces","can a filibuster stop a supreme court nominee","is the president the only member of the executive branch","does each state have their own national guard","has anyone hit a hole in one on a par 5","is there a word with q without u","are there tolls on i-70 in kansas","do they still make benson & hedges cigarettes","do powerball matches have to be in order","are there any games that are cross platform","does salt water taffy have salt in it","will there be a series 5 of brokenwood mysteries","do they still make new episodes of dora","was there a draft in the revolutionary war","is a yard the same as a meter","is st kitts and nevis a us territory","is ivory coast and cote d ivoire the same","is it illegal to make covers of songs","did boo the world's cutest dog die","can a hammer be used as a weapon","can you call fair catch on a kickoff","do both male and female bighorn sheep have horns","has czech republic ever won the world cup","was the movie insomnia based on a book","is it legal to do a cover of a song","is san pedro laguna part of metro manila","can an african team win the world cup","can a tree have more than one trunk","do female ferrets die if they don't mate","are ground coriander and cumin the same thing","did brendon urie wrote death of a bachelor","do you have to pay both ways on the george washington bridge","can you sell a gun privately in florida","do you have to be born with perfect pitch","do the jets and giants share a stadium","is there a red light district in brussels","is the isle of man part of the european economic area","do you need a pal to possess ammunition","was the power of one a true story","can you cut the stock off a shotgun","is amy's baking company in scottsdale still open","can you boat from lake michigan to atlantic ocean","can you pass the ball more than once in american football","is hindi is our national language of india","can the heat of a hair dryer kill lice","do queen ants give birth to queen ants","can a real image be projected onto a screen","did my name is earl finish his list","does p o box come before street address","was the parkers a spin off of moesha","is 1 ounce the same as 1 fluid ounce","do you need a permit to carry a gun in nh"],"gold":[false,true,true,true,true,false,false,true,true,true,true,true,false,true,true,false,true,true,true,true,true,false,true,true,true,true,true,false,false,true,true,true,true,false,true,true,false,true,false,true,true,true,false,true,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,true,true,true,false,true,true,false,true,true,true,false,false,true,false,true,false,true,false,true,true,true,false,true,true,false,false,true,false,true,true,true,false,false,true,true,true,true,true,false,true,false,false,false,true,false,true,false,false,true,true,true,false,true,true,true,true,false,true,true,true,true,true,false,true,false,true,false,true,true,false,true,true,true,false,true,false,true,true,false,false,false,true,false,true,true,false,true,true,false,true,true,true,false,true,true,false,true,false,true,false,false,true,false,true,false,true,true,true,true,true,true,false,true,false,true,true,false,true,false,false,false,false,false,true,false,true,false,true,true,false,true,true,false,false,false,true,true,true,true,true,true,true,true,true,false,false,true,false,false,true,false,true,true,false,true,false,false,true,true,true,true,false,true,false,true,false,false,true,true,true,true,true,true,true,false,false,true,false,false,true,false,true,true,true,false,true,true,false,false,true,false,true,true,false,true,true,true,false,true,true,true,true,true,true,true,false,false,true,true,true,true,false,true,true,true,true,false,false,true,true,true,true,true,true,true,false,false,true,true,true,false,false,true,true,true,true,false,true,true,true,false,true,true,false,true,true,false,false,false,true,true,true,false,true,true,false,true,true,true,false,true,false,true,true,true,false,false,true,false,true,false,true,false,true,false,false,true,false,true,false,true,true,false,true,true,false,true,true,true,true,true,true,true,false,true,true,true,false,true,false,false,true,false,false,true,true,true,false,false,true,false,true,true,true,false,true,false,true,false,true,true,false,true,false,true,false,true,true,true,true,true,true,false,false,true,true,false],"costs_draw":{"uniform":[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"lognormal":[0.832,1.033,2.0114,0.9081,4.1103,0.216,1.3112,0.2995,0.9482,0.7481,0.7462,0.1216,1.0884,1.8719,5.362,2.3027,0.0988,0.2936,2.5656,0.347,1.2248,0.2243,2.1881,3.2333,1.311,1.3081,1.2007,0.5193,1.7568,0.9567,1.1212,1.6261,5.2181,6.27,0.7791,1.7304,1.4575,4.2257,0.1936,0.4306,2.1322,1.8268,0.1344,0.1603,4.527,1.3748,1.8009,1.2387,0.4416,0.2404,0.397,0.2576,0.731,1.0065,0.4475,11.6756,2.4621,0.3462,0.887,0.9208,1.2729,0.6046,2.1669,1.111,1.8665,0.3383,0.7005,1.8322,1.8302,0.6567,0.6883,1.4613,4.4432,0.7822,1.8133,1.339,0.8811,0.2885,0.9514,0.9866,0.7427,1.2829,0.5922,0.6697,3.2344,7.5892,0.8246,0.4934,0.2691,1.4861,2.4208,2.0199,4.1828,2.5259,6.8197,0.6228,0.297,0.2571,1.762,1.2407,0.5507,1.1249,0.9517,1.0435,0.7808,0.8501,3.7918,0.5976,1.8168,0.2777,1.4165,1.5787,0.2484,1.0609,0.9541,1.7043,0.1588,0.832,0.7734,0.3376,2.6647,0.4693,0.6305,0.6039,3.6109,2.8747,0.9947,1.4414,1.2726,0.1448,4.0885,6.9551,0.7073,0.1735,5.0735,3.9864,1.4833,8.6845,2.4033,1.1634,2.942,2.2628,2.7095,4.4402,1.0159,2.974,0.436,0.4079,0.2547,0.9025,3.1309,0.6753,0.8155,0.9429,1.283,1.1377,0.4088,0.8695,1.4256,1.4089,0.1313,2.6917,7.4147,3.0239,1.8294,2.3902,2.2445,1.7112,0.7867,1.1701,1.799,0.6861,0.7463,0.8516,5.858,0.2334,1.3906,1.5133,0.3165,0.2899,2.3448,0.2118,0.2618,2.1338,0.3626,3.5075,0.9375,1.3308,1.1787,2.1454,0.1654,0.5391,0.2828,1.3996,0.3457,1.2926,0.8606,0.7642,1.7793,0.4874,0.3663,2.0209,1.3773,2.4988,0.4736,0.8558,0.2809,0.3196,1.5775,2.4483,3.4622,1.0963,1.9534,3.5755,0.1453,0.3464,1.113,0.8202,0.5531,1.1849,2.0585,0.5573,0.3729,0.4717,1.4055,1.0957,1.4726,9.5443,0.567,1.2997,1.7271,1.1991,1.5634,0.923,0.8774,0.4081,0.3403,1.5588,1.2377,0.6452,3.4505,3.5088,0.1514,0.6658,0.9047,0.3738,3.3421,0.733,1.0488,3.5486,2.2529,2.3686,0.5503,6.2074,0.2829,0.6075,1.3318,1.6331,2.0556,0.6279,1.5961,1.3132,1.5625,0.657,1.3615,4.6614,3.8114,3.7558,0.7359,0.5723,0.7343,0.2899,0.3507,0.5113,3.0659,0.1002,0.5265,1.4645,0.784,4.5852,0.161,0.8955,0.5997,0.3413,2.9905,0.777,0.4485,0.4825,0.7768,1.0876,0.5933,1.7155,1.702,0.2465,2.8894,1.2045,0.1606,0.475,2.797,0.3965,1.4784,1.3622,1.1452,1.1623,0.3497,5.2977,8.5335,1.4796,0.1591,9.5803,0.5408,9.3084,1.0733,0.9258,0.2508,1.7265,4.4736,0.1228,0.352,7.0793,2.2141,0.6179,3.1021,0.2856,0.5945,1.2882,1.2521,0.3648,1.3268,0.2913,0.4227,0.7439,1.9883,0.8095,1.2255,1.8146,0.774,3.676,1.597,0.1614,2.0758,1.4606,1.5565,0.9178,1.2637,7.1233,0.6579,0.4953,1.9713,0.4594,0.7654,4.6113,1.1782,1.8024,1.8908,0.993,2.0996,1.9474,1.4958,1.0791,0.3165,5.8111,3.27,0.0494,2.7838,3.4808,3.3821,1.3751,3.3701,4.3981,6.6283,0.3049,0.0742,0.5096,1.3819,0.2596,3.6276,1.8134,0.5243,5.2414,0.0866,1.6617,1.1852,5.8068,0.6751,1.9662,1.8283,0.981,0.7066,0.8387,5.9551,3.3268,2.0829,3.5334,0.2049,0.2274,1.9118,1.7116],"adversarial":[3.1951,4.0288,5.9135,3.3964,15.9482,0.7904,5.1136,1.1622,3.7551,2.6333,2.6414,0.406,4.2884,6.2521,21.1262,8.2436,0.3812,0.9807,9.7492,0.9437,4.8749,0.7044,8.0521,12.6098,4.9033,4.5259,4.7546,1.7761,6.3244,2.8511,3.7001,5.4311,20.6635,23.0735,3.0696,6.5757,5.3929,15.128,0.6158,1.5932,7.5053,6.5035,0.5189,0.6219,12.4041,5.1967,7.0237,3.5921,1.7576,0.9473,1.0958,0.9994,2.2223,3.2611,1.4678,45.3015,8.7651,1.2048,3.4947,3.6096,3.7423,2.1161,7.8443,4.0441,5.7115,1.3465,2.7179,6.6326,7.1378,1.9702,2.1751,5.5823,14.6626,3.1131,5.5125,3.642,3.2073,1.0905,3.5392,3.8082,2.8669,4.9519,2.0727,2.5314,11.5146,30.0532,2.2758,1.9044,1.0227,5.8553,9.4894,7.7566,15.56,8.4365,25.9147,2.1673,1.0871,1.0128,6.7661,4.8883,2.1807,4.3422,3.7307,4.0904,1.874,2.4822,10.9203,1.3983,6.4679,1.0886,5.5528,5.178,0.9687,4.0739,3.6826,6.5444,0.6289,2.9952,3.0782,1.2288,7.3012,1.6802,2.4589,2.3915,12.1327,10.694,3.4416,5.5349,4.5813,0.5445,14.4733,27.5421,2.6454,0.6661,20.1924,15.4671,5.6959,33.5222,9.4691,3.3972,10.3559,8.8248,9.9709,17.583,3.9214,11.2419,1.2905,1.607,0.8304,3.2131,10.7077,2.62,3.2293,2.8663,4.978,3.8228,1.5779,3.4605,5.6452,3.7477,0.4596,10.0133,28.176,11.9747,7.1713,9.3695,8.7983,6.7765,2.7062,4.6102,7.1601,2.6621,2.7613,3.2701,23.1977,0.9241,5.3956,5.9323,1.2407,1.0206,8.2067,0.7835,0.9635,7.5536,1.1967,12.8374,3.6936,4.3916,4.6677,7.8521,0.6284,2.1458,1.0352,5.0105,1.3553,3.6969,3.3048,3.0108,7.0461,1.6671,1.055,7.5986,5.3714,5.0476,1.8566,3.4059,1.0449,0.6648,6.247,9.2055,12.8795,3.8589,7.2665,11.8707,0.5404,1.3716,4.3628,3.1987,2.1902,4.2421,7.74,2.0843,1.35,1.8208,2.9515,4.1635,5.6254,33.9778,1.9733,5.0949,6.7357,4.4846,5.3781,3.5626,2.0881,1.4285,1.1569,6.1729,4.8766,2.4517,13.5951,13.123,0.5996,2.3038,1.8637,1.353,12.9675,2.2578,3.6706,12.6329,6.4433,9.3323,2.1132,21.2294,1.0919,2.0653,4.8212,5.683,5.7968,2.4615,6.2886,3.8082,6.1877,2.5755,5.4188,18.366,13.9496,14.948,2.6491,2.003,2.6874,1.0668,1.3888,1.5849,11.8958,0.3546,2.0637,5.8286,3.1046,18.2492,0.6375,3.0806,2.1231,1.2763,11.3637,2.8437,1.3635,1.8238,3.0915,3.7848,2.1595,6.7249,6.2975,0.7345,11.442,4.7699,0.6168,1.8239,10.0133,1.5541,5.4699,5.2583,4.2373,2.9056,0.8673,20.767,32.2567,5.7706,0.6206,26.6332,1.9686,36.675,3.8638,3.6105,0.9732,6.5952,17.6261,0.4619,1.4009,27.1844,8.1037,2.4097,11.3537,1.1367,2.3543,4.0191,4.5326,0.9048,4.0336,1.0719,1.5133,2.9457,7.8735,2.396,3.75,6.2423,2.3374,14.1895,6.2921,0.6328,8.1371,4.8491,5.5413,3.4693,4.8777,25.6438,2.0263,1.4065,7.7668,1.7735,3.0157,17.7995,4.6185,6.8131,7.2229,3.8529,8.3143,7.3221,5.6841,4.23,1.2596,23.0118,13.0145,0.1887,10.8567,13.5055,12.9872,5.4456,11.6606,14.1619,25.1874,1.1525,0.2048,2.0284,4.5049,1.0229,14.0027,6.9273,1.7826,15.4098,0.343,6.514,4.6696,22.066,2.498,7.3535,7.2036,3.5904,2.2187,3.2878,19.7708,9.8474,8.2067,13.3562,0.705,0.9006,7.4178,6.4015]},"arms":{"chat-google_gemini-2.5-flash-lite":{"p_wrong":[0.0,0.0,0.2,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.1,0.0,0.1,0.0,0.1,0.0,0.1,0.0,0.1,0.0,0.1,0.0,0.0,0.1,0.1,0.0,0.1,0.1,0.2,0.0,0.1,0.0,0.1,0.0,0.0,0.1,0.1,0.1,0.1,0.0,0.1,0.0,0.0,0.3,0.0,0.0,0.3,0.0,0.0,0.4,0.0,0.1,0.1,0.1,0.0,0.1,0.0,0.0,0.0,0.2,0.0,0.1,0.1,0.0,0.0,0.0,0.1,0.0,0.3,0.1,0.0,0.1,0.0,0.1,0.1,0.05,0.0,0.1,0.0,0.0,0.0,0.1,0.0,0.1,0.0,0.3,0.0,0.0,0.0,0.0,0.0,0.1,0.1,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.01,0.0,0.0,0.2,0.1,0.1,0.3,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.2,0.0,0.0,0.0,0.1,0.0,0.1,0.0,0.1,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.1,0.0,0.1,0.0,0.0,0.0,0.1,0.0,0.1,0.1,0.0,0.0,0.0,0.2,0.0,0.1,0.0,0.0,0.0,0.2,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.0,0.1,0.0,0.0,0.05,0.0,0.0,0.1,0.0,0.1,0.0,0.0,0.0,0.0,0.1,0.0,0.0,0.4,0.0,0.0,0.0,0.3,0.0,0.0,0.0,0.1,0.1,0.1,0.0,0.0,0.0,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.4,0.0,0.0,0.1,0.0,0.0,0.0,0.1,0.2,0.0,0.3,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.4,0.1,0.0,0.1,0.1,0.1,0.1,0.0,0.0,0.1,0.0,0.1,0.05,0.0,0.0,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.1,0.0,0.1,0.0,0.1,0.0,0.0,0.1,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.1,0.1,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.1,0.0,0.1,0.1,0.0,0.0,0.0,0.0,0.1,0.0,0.1,0.0,0.0,0.2,0.4,0.0,0.0,0.01,0.0,0.1,0.1,0.0,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.1,0.0,0.3,0.1,0.1,0.1,0.0,0.0,0.1,0.1,0.1,0.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.1,0.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.0,0.0,0.0,0.1,0.0,0.0,0.0,0.1,0.0,0.1,0.0,0.0,0.0,0.1,0.2,0.0,0.0,0.0,0.0,0.1,0.0,0.0,0.1,0.2,0.0,0.1,0.1,0.0,0.0,0.0,0.0,0.0,0.0],"wrong":[false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,true,false],"n_wrong":44},"chat-openai_gpt-5-mini":{"p_wrong":[0.05,0.01,0.05,0.05,0.02,0.02,0.02,0.0,0.01,0.05,0.1,0.02,0.0,0.05,0.01,0.05,0.05,0.15,0.05,0.08,0.0,0.05,0.01,0.02,0.01,0.05,0.01,0.02,0.02,0.1,0.01,0.05,0.0,0.02,0.02,0.05,0.02,0.08,0.15,0.01,0.05,0.05,0.01,0.05,0.0,0.02,0.02,0.02,0.0,0.02,0.1,0.01,0.05,0.1,0.1,0.01,0.05,0.01,0.02,0.02,0.05,0.1,0.05,0.05,0.02,0.0,0.05,0.02,0.02,0.05,0.2,0.02,0.05,0.0,0.05,0.05,0.05,0.02,0.02,0.05,0.05,0.02,0.05,0.05,0.05,0.01,0.2,0.05,0.05,0.02,0.0,0.05,0.01,0.02,0.02,0.0,0.05,0.02,0.05,0.01,0.01,0.0,0.02,0.0,0.5,0.05,0.1,0.05,0.05,0.01,0.01,0.1,0.02,0.02,0.01,0.05,0.01,0.05,0.0,0.05,0.08,0.05,0.01,0.01,0.1,0.02,0.02,0.01,0.01,0.05,0.05,0.01,0.1,0.05,0.0,0.05,0.01,0.05,0.01,0.05,0.05,0.02,0.05,0.01,0.05,0.02,0.05,0.02,0.05,0.05,0.02,0.05,0.01,0.05,0.05,0.05,0.0,0.0,0.01,0.05,0.05,0.02,0.05,0.0,0.01,0.01,0.01,0.01,0.05,0.01,0.0,0.01,0.01,0.05,0.01,0.01,0.02,0.02,0.02,0.01,0.05,0.02,0.0,0.01,0.05,0.01,0.02,0.02,0.01,0.05,0.01,0.0,0.05,0.02,0.02,0.03,0.01,0.01,0.01,0.05,0.05,0.08,0.02,0.2,0.02,0.0,0.02,0.2,0.0,0.02,0.05,0.05,0.01,0.05,0.05,0.01,0.01,0.02,0.01,0.05,0.02,0.05,0.0,0.05,0.05,0.0,0.05,0.02,0.05,0.01,0.02,0.01,0.05,0.02,0.05,0.02,0.02,0.01,0.01,0.02,0.01,0.0,0.01,0.1,0.25,0.01,0.05,0.1,0.05,0.05,0.05,0.02,0.02,0.05,0.01,0.05,0.02,0.05,0.1,0.01,0.01,0.13,0.01,0.02,0.0,0.01,0.0,0.0,0.05,0.1,0.05,0.05,0.0,0.05,0.05,0.0,0.02,0.0,0.0,0.0,0.01,0.05,0.02,0.05,0.05,0.05,0.05,0.02,0.01,0.05,0.05,0.02,0.02,0.02,0.01,0.01,0.01,0.05,0.05,0.0,0.02,0.05,0.05,0.1,0.1,0.01,0.05,0.01,0.02,0.2,0.02,0.02,0.02,0.02,0.02,0.0,0.01,0.05,0.0,0.01,0.02,0.01,0.05,0.0,0.01,0.1,0.0,0.1,0.02,0.03,0.05,0.01,0.01,0.2,0.1,0.02,0.02,0.05,0.01,0.01,0.01,0.02,0.05,0.05,0.05,0.05,0.05,0.02,0.01,0.02,0.01,0.01,0.02,0.05,0.01,0.05,0.01,0.05,0.0,0.01,0.0,0.01,0.0,0.02,0.01,0.05,0.05,0.01,0.05,0.08,0.05,0.05,0.2,0.0,0.05,0.01,0.01,0.01,0.1,0.15,0.01,0.02,0.01,0.05,0.02,0.05,0.01,0.01,0.15,0.0,0.15,0.1,0.02,0.01,0.01,0.01,0.01,0.0],"wrong":[false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,true,false],"n_wrong":32},"jev-typesafe_jev-1.13":{"p_wrong":[0.03,0.04,0.28,0.08,0.04,0.05,0.03,0.06,0.01,0.19,0.13,0.21,0.03,0.18,0.02,0.06,0.02,0.08,0.05,0.46,0.01,0.28,0.15,0.03,0.02,0.12,0.01,0.17,0.08,0.21,0.34,0.18,0.02,0.04,0.01,0.05,0.03,0.03,0.16,0.04,0.19,0.07,0.06,0.01,0.33,0.09,0.03,0.23,0.01,0.01,0.12,0.05,0.33,0.18,0.16,0.05,0.07,0.25,0.01,0.02,0.28,0.15,0.04,0.03,0.45,0.01,0.01,0.07,0.03,0.15,0.12,0.07,0.2,0.01,0.33,0.49,0.08,0.09,0.02,0.02,0.02,0.05,0.1,0.06,0.07,0.01,0.12,0.02,0.05,0.01,0.04,0.03,0.03,0.21,0.08,0.16,0.12,0.01,0.03,0.02,0.01,0.06,0.02,0.04,0.1,0.39,0.36,0.48,0.07,0.03,0.03,0.26,0.03,0.06,0.06,0.03,0.01,0.15,0.01,0.03,0.35,0.16,0.04,0.01,0.12,0.12,0.15,0.07,0.09,0.07,0.08,0.01,0.03,0.03,0.01,0.01,0.07,0.02,0.02,0.39,0.09,0.03,0.01,0.01,0.02,0.09,0.37,0.01,0.22,0.07,0.27,0.01,0.01,0.23,0.01,0.17,0.07,0.01,0.01,0.42,0.1,0.12,0.05,0.02,0.03,0.03,0.03,0.01,0.23,0.02,0.01,0.05,0.04,0.03,0.01,0.01,0.04,0.02,0.02,0.13,0.1,0.03,0.06,0.12,0.2,0.06,0.01,0.23,0.01,0.12,0.04,0.01,0.12,0.09,0.02,0.44,0.07,0.02,0.01,0.24,0.41,0.04,0.03,0.39,0.02,0.01,0.12,0.46,0.02,0.1,0.09,0.09,0.03,0.19,0.09,0.01,0.03,0.03,0.01,0.06,0.1,0.08,0.19,0.02,0.5,0.1,0.04,0.1,0.21,0.03,0.03,0.02,0.03,0.05,0.46,0.13,0.28,0.01,0.02,0.08,0.02,0.13,0.01,0.07,0.32,0.08,0.01,0.26,0.1,0.07,0.42,0.01,0.06,0.14,0.06,0.15,0.12,0.21,0.49,0.03,0.02,0.12,0.01,0.02,0.01,0.02,0.07,0.01,0.05,0.15,0.02,0.11,0.02,0.3,0.01,0.13,0.02,0.01,0.02,0.01,0.01,0.13,0.11,0.08,0.05,0.02,0.43,0.09,0.0,0.21,0.03,0.02,0.03,0.39,0.01,0.01,0.07,0.03,0.06,0.04,0.03,0.02,0.1,0.45,0.26,0.03,0.06,0.03,0.03,0.31,0.06,0.01,0.08,0.03,0.04,0.09,0.02,0.07,0.01,0.07,0.05,0.04,0.12,0.01,0.01,0.24,0.19,0.36,0.36,0.03,0.06,0.01,0.01,0.22,0.27,0.16,0.17,0.02,0.02,0.03,0.03,0.32,0.17,0.06,0.02,0.05,0.31,0.46,0.02,0.05,0.02,0.06,0.02,0.06,0.08,0.01,0.01,0.07,0.1,0.03,0.01,0.01,0.01,0.07,0.03,0.01,0.03,0.01,0.12,0.31,0.05,0.06,0.32,0.01,0.22,0.02,0.06,0.08,0.1,0.18,0.01,0.02,0.02,0.05,0.03,0.08,0.02,0.06,0.08,0.04,0.09,0.32,0.01,0.1,0.27,0.01,0.05,0.13],"wrong":[false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,true,false],"n_wrong":25}},"bootstrap":{"chat-google_gemini-2.5-flash-lite":{"uniform":{"policies":{"random":{"share":[0.0094,0.0365,0.0604,0.085,0.0907,0.1325,0.2036,0.2489,0.315],"lo":[0.0,0.0,0.0,0.0192,0.0208,0.0377,0.098,0.1351,0.1875],"hi":[0.0541,0.1026,0.14,0.1702,0.1795,0.2439,0.3182,0.3696,0.45],"caught":[0.0,2.0,3.0,4.0,4.0,6.0,9.0,11.0,14.0]},"threshold":{"share":[0.0302,0.0543,0.1087,0.134,0.1414,0.1757,0.2105,0.2817,0.3009],"lo":[0.0,0.0,0.0294,0.0476,0.0513,0.0769,0.102,0.1538,0.1707],"hi":[0.087,0.125,0.2,0.2439,0.2558,0.2927,0.3333,0.4186,0.44],"caught":[2.0,2.0,5.0,6.0,6.0,8.0,9.0,13.0,13.0]},"uncertainty":{"share":[0.067,0.0907,0.12,0.1457,0.1784,0.2685,0.3629,0.4493,0.5623],"lo":[0.0192,0.0227,0.0426,0.0541,0.0833,0.1458,0.2222,0.3043,0.4],"hi":[0.122,0.175,0.2128,0.2558,0.2927,0.4,0.5,0.5952,0.7073],"caught":[3.0,4.0,5.0,6.0,8.0,12.0,16.0,20.0,26.0]},"expected-harm":{"share":[0.067,0.0907,0.12,0.1457,0.1784,0.2685,0.3629,0.4493,0.5623],"lo":[0.0192,0.0227,0.0426,0.0541,0.0833,0.1458,0.2222,0.3043,0.4],"hi":[0.122,0.175,0.2128,0.2558,0.2927,0.4,0.5,0.5952,0.7073],"caught":[3.0,4.0,5.0,6.0,8.0,12.0,16.0,20.0,26.0]},"oracle":{"share":[0.1166,0.2332,0.4664,0.699,0.9048,0.9999,1.0,1.0,1.0],"lo":[0.0893,0.1786,0.3571,0.5357,0.7143,1.0,1.0,1.0,1.0],"hi":[0.1515,0.303,0.6061,0.9091,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,30.0,40.0,44.0,44.0,44.0,44.0]}},"vs":{"threshold":{"mean":[0.0368,0.0364,0.0113,0.0117,0.0369,0.0928,0.1524,0.1675,0.2614],"lo":[-0.0233,-0.0233,-0.0417,0.0,0.0,0.0161,0.0455,0.0426,0.1053],"hi":[0.1053,0.1081,0.0789,0.0667,0.1081,0.1951,0.2821,0.3061,0.425],"wins":[0.9509,0.9462,0.7439,0.9754,1.0,1.0,0.9995,0.998,1.0],"half":[0.0241,0.0241,0.0301,0.0373,0.025,0.0222,0.022,0.0219,0.0219],"n":[1649,1653,1062,691,1539,1951,1989,1995,2000],"need":[11,15,19,26,51,91,147,174,222]},"uncertainty":{"mean":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"lo":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"hi":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"wins":[null,null,null,null,null,null,null,null,null],"half":[null,null,null,null,null,null,null,null,null],"n":[0,0,0,0,0,0,0,0,0],"need":[4,7,15,23,35,55,77,95,118]}}},"lognormal":{"policies":{"random":{"share":[0.0097,0.0366,0.0618,0.0873,0.0929,0.1354,0.2072,0.2543,0.322],"lo":[0.0,0.0,0.0,0.0029,0.0037,0.0131,0.0443,0.0734,0.1086],"hi":[0.0823,0.1919,0.2552,0.3024,0.3182,0.3901,0.4975,0.5522,0.6025],"caught":[0.0,2.0,3.0,4.0,4.0,6.0,9.0,11.0,14.0]},"threshold":{"share":[0.0304,0.0556,0.1086,0.1333,0.1403,0.1734,0.2081,0.2796,0.2983],"lo":[0.0,0.0,0.0108,0.0178,0.0207,0.0347,0.0499,0.0869,0.0975],"hi":[0.1555,0.2315,0.3216,0.3666,0.3714,0.4166,0.4817,0.5777,0.5998],"caught":[2.0,2.0,5.0,6.0,6.0,8.0,9.0,13.0,13.0]},"uncertainty":{"share":[0.0666,0.0904,0.1194,0.1438,0.176,0.2662,0.3588,0.4454,0.5619],"lo":[0.003,0.0062,0.015,0.023,0.0371,0.0779,0.1349,0.2077,0.2836],"hi":[0.2313,0.2921,0.3423,0.3751,0.4202,0.5622,0.6396,0.7164,0.8133],"caught":[3.0,4.0,5.0,6.0,8.0,12.0,16.0,20.0,26.0]},"expected-harm":{"share":[0.1172,0.1883,0.2856,0.3616,0.4246,0.5177,0.5828,0.6308,0.662],"lo":[0.0,0.0,0.0,0.0724,0.1311,0.221,0.2939,0.3534,0.3855],"hi":[0.4306,0.5408,0.6158,0.6737,0.7134,0.7772,0.8228,0.8522,0.8746],"caught":[1.4065,2.617,4.8375,6.975,9.0615,13.178,17.253,21.326,25.3485]},"oracle":{"share":[0.3865,0.5784,0.8016,0.9239,0.9831,1.0,1.0,1.0,1.0],"lo":[0.2453,0.4259,0.6704,0.8263,0.9272,1.0,1.0,1.0,1.0],"hi":[0.5828,0.7495,0.9182,0.992,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,30.0,40.0,44.0,44.0,44.0,44.0]}},"vs":{"threshold":{"mean":[0.0867,0.1327,0.177,0.2283,0.2843,0.3443,0.3746,0.3512,0.3637],"lo":[-0.0599,-0.0558,-0.0541,-0.0288,0.0126,0.0637,0.0935,0.0748,0.0941],"hi":[0.4062,0.4862,0.5319,0.5716,0.6109,0.6532,0.6723,0.6518,0.6637],"wins":[0.6937,0.7867,0.8525,0.9263,0.98,0.995,0.998,0.9945,0.9935],"half":[0.0237,0.0225,0.0221,0.022,0.0219,0.0219,0.0219,0.0219,0.0219],"n":[1711,1894,1966,1980,1996,2000,2000,2000,2000],"need":[11,26,93,146,167,209,235,249,258]},"uncertainty":{"mean":[0.0506,0.098,0.1661,0.2178,0.2486,0.2515,0.224,0.1854,0.1001],"lo":[-0.0966,-0.0815,-0.0589,-0.0373,-0.0198,-0.0093,0.0067,0.0089,-0.0071],"hi":[0.3686,0.4542,0.5184,0.5604,0.5691,0.5708,0.5421,0.4856,0.3522],"wins":[0.4578,0.6267,0.8178,0.9148,0.9625,0.9695,0.9795,0.9835,0.9345],"half":[0.0225,0.0223,0.0221,0.022,0.0219,0.0219,0.0219,0.0219,0.0222],"n":[1896,1926,1965,1984,1998,2000,2000,2000,1954],"need":[4,23,59,77,90,110,120,128,135]}}},"adversarial":{"policies":{"random":{"share":[0.0087,0.0353,0.0618,0.0863,0.0914,0.1342,0.2074,0.2568,0.3316],"lo":[0.0,0.0,0.0,0.0028,0.0034,0.0122,0.0448,0.0741,0.1108],"hi":[0.0739,0.1843,0.2503,0.3006,0.3121,0.3933,0.4991,0.553,0.6192],"caught":[0.0,2.0,3.0,4.0,4.0,6.0,9.0,11.0,14.0]},"threshold":{"share":[0.0269,0.048,0.0869,0.1074,0.1135,0.1447,0.1791,0.246,0.2635],"lo":[0.0,0.0,0.0084,0.0139,0.015,0.028,0.0421,0.0727,0.0825],"hi":[0.138,0.2041,0.2516,0.3102,0.3145,0.3743,0.4428,0.5302,0.5468],"caught":[2.0,2.0,5.0,6.0,6.0,8.0,9.0,13.0,13.0]},"uncertainty":{"share":[0.0496,0.0696,0.0959,0.1167,0.1474,0.2337,0.3266,0.4178,0.537],"lo":[0.0019,0.0046,0.011,0.0169,0.0296,0.0647,0.118,0.1842,0.2583],"hi":[0.1826,0.2369,0.2865,0.3183,0.38,0.5147,0.6037,0.6929,0.7968],"caught":[3.0,4.0,5.0,6.0,8.0,12.0,16.0,20.0,26.0]},"expected-harm":{"share":[0.1089,0.1726,0.2663,0.339,0.3976,0.4888,0.5545,0.6027,0.6354],"lo":[0.0,0.0,0.0,0.0586,0.1122,0.1954,0.269,0.3199,0.3533],"hi":[0.4191,0.5217,0.5885,0.6583,0.6984,0.7599,0.8024,0.8326,0.8615],"caught":[1.2715,2.38,4.466,6.5465,8.559,12.6165,16.7,20.8005,24.987]},"oracle":{"share":[0.3896,0.5825,0.8046,0.9254,0.9835,1.0,1.0,1.0,1.0],"lo":[0.2463,0.4274,0.6727,0.8281,0.9291,1.0,1.0,1.0,1.0],"hi":[0.587,0.7521,0.9189,0.9919,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,30.0,40.0,44.0,44.0,44.0,44.0]}},"vs":{"threshold":{"mean":[0.082,0.1245,0.1794,0.2316,0.2841,0.344,0.3755,0.3567,0.3719],"lo":[-0.0555,-0.0518,-0.0509,-0.0315,0.0071,0.0585,0.0946,0.0782,0.0978],"hi":[0.3988,0.4809,0.5203,0.5657,0.6093,0.6491,0.669,0.6505,0.667],"wins":[0.6631,0.7489,0.845,0.9306,0.978,0.993,0.998,0.9945,0.9945],"half":[0.0238,0.0225,0.022,0.022,0.0219,0.0219,0.0219,0.0219,0.0219],"n":[1695,1896,1981,1989,1997,2000,2000,2000,2000],"need":[9,46,99,151,168,209,233,245,254]},"uncertainty":{"mean":[0.0593,0.103,0.1705,0.2223,0.2502,0.255,0.2279,0.1849,0.0984],"lo":[-0.0835,-0.0723,-0.0565,-0.0424,-0.0243,-0.0108,0.0032,0.0043,-0.0089],"hi":[0.3866,0.4632,0.5151,0.5597,0.5749,0.5782,0.552,0.4857,0.3637],"wins":[0.48,0.6345,0.8221,0.9196,0.96,0.968,0.9785,0.9795,0.929],"half":[0.0223,0.0222,0.022,0.022,0.0219,0.0219,0.0219,0.0219,0.0221],"n":[1929,1956,1984,1991,1999,2000,2000,2000,1958],"need":[4,31,63,79,91,110,119,128,135]}}}},"chat-openai_gpt-5-mini":{"uniform":{"policies":{"random":{"share":[0.0,0.0,0.0021,0.0243,0.0318,0.0704,0.1457,0.2032,0.2406],"lo":[0.0,0.0,0.0,0.0,0.0,0.0,0.0357,0.0741,0.1034],"hi":[0.0,0.0,0.0333,0.1,0.1053,0.1923,0.2759,0.3448,0.3889],"caught":[0.0,0.0,0.0,1.0,1.0,2.0,5.0,7.0,8.0]},"threshold":{"share":[0.0723,0.1052,0.1465,0.1553,0.1613,0.2219,0.2733,0.3166,0.3418],"lo":[0.0,0.025,0.0345,0.0345,0.0385,0.0938,0.1304,0.1667,0.1818],"hi":[0.1481,0.2143,0.2812,0.3,0.303,0.375,0.4286,0.475,0.5161],"caught":[2.0,3.0,5.0,5.0,5.0,7.0,9.0,10.0,11.0]},"uncertainty":{"share":[0.0509,0.1035,0.1318,0.1747,0.1996,0.2554,0.2845,0.3164,0.3804],"lo":[0.0,0.0208,0.0303,0.0588,0.0714,0.1111,0.1333,0.1628,0.2222],"hi":[0.125,0.2121,0.2581,0.3077,0.3421,0.4138,0.4483,0.4828,0.5625],"caught":[2.0,4.0,4.0,6.0,6.0,8.0,9.0,10.0,11.0]},"expected-harm":{"share":[0.0509,0.1035,0.1318,0.1747,0.1996,0.2554,0.2845,0.3164,0.3804],"lo":[0.0,0.0208,0.0303,0.0588,0.0714,0.1111,0.1333,0.1628,0.2222],"hi":[0.125,0.2121,0.2581,0.3077,0.3421,0.4138,0.4483,0.4828,0.5625],"caught":[2.0,4.0,4.0,6.0,6.0,8.0,9.0,10.0,11.0]},"oracle":{"share":[0.162,0.324,0.6471,0.9151,0.9954,1.0,1.0,1.0,1.0],"lo":[0.1163,0.2326,0.4651,0.6977,0.9302,1.0,1.0,1.0,1.0],"hi":[0.2273,0.4545,0.9091,1.0,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,30.0,32.0,32.0,32.0,32.0,32.0]}},"vs":{"threshold":{"mean":[-0.0215,-0.0016,-0.0148,0.0194,0.0383,0.0335,0.0112,-0.0002,0.0386],"lo":[-0.1,-0.0714,-0.0909,-0.0833,-0.0714,-0.0968,-0.1471,-0.16,-0.1481],"hi":[0.0435,0.0625,0.0606,0.1333,0.1481,0.1562,0.16,0.16,0.2424],"wins":[0.1613,0.4753,0.1748,0.6647,0.8241,0.7767,0.5789,0.5027,0.6718],"half":[0.0276,0.0353,0.0312,0.0253,0.0244,0.0243,0.024,0.0242,0.0234],"n":[1265,770,984,1506,1615,1621,1672,1645,1749],"need":[2,7,11,31,50,67,80,91,136]},"uncertainty":{"mean":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"lo":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"hi":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"wins":[null,null,null,null,null,null,null,null,null],"half":[null,null,null,null,null,null,null,null,null],"n":[0,0,0,0,0,0,0,0,0],"need":[4,8,10,25,30,51,63,88,113]}}},"lognormal":{"policies":{"random":{"share":[0.0,0.0,0.0021,0.0248,0.0324,0.0715,0.1477,0.2059,0.2447],"lo":[0.0,0.0,0.0,0.0,0.0,0.0,0.0135,0.0324,0.0509],"hi":[0.0,0.0,0.0257,0.1727,0.211,0.3186,0.4377,0.5215,0.5732],"caught":[0.0,0.0,0.0,1.0,1.0,2.0,5.0,7.0,8.0]},"threshold":{"share":[0.0696,0.1023,0.1446,0.1532,0.1591,0.2203,0.2728,0.3164,0.3423],"lo":[0.0,0.0022,0.0123,0.0136,0.017,0.0442,0.0647,0.0868,0.0941],"hi":[0.2774,0.3436,0.4112,0.4294,0.4345,0.5249,0.5995,0.6411,0.6651],"caught":[2.0,3.0,5.0,5.0,5.0,7.0,9.0,10.0,11.0]},"uncertainty":{"share":[0.0487,0.1018,0.1292,0.1712,0.1959,0.2523,0.2806,0.3107,0.3751],"lo":[0.0,0.0013,0.0083,0.0221,0.032,0.0538,0.0634,0.0794,0.1234],"hi":[0.2297,0.351,0.3916,0.4584,0.4972,0.5588,0.6033,0.6382,0.7146],"caught":[2.0,4.0,4.0,6.0,6.0,8.0,9.0,10.0,11.0]},"expected-harm":{"share":[0.0837,0.1356,0.2143,0.2781,0.3327,0.4217,0.496,0.5617,0.6151],"lo":[0.0,0.0,0.0,0.0,0.0258,0.0749,0.1353,0.2108,0.2764],"hi":[0.4437,0.5271,0.588,0.6495,0.7003,0.7555,0.7974,0.8421,0.8619],"caught":[0.8005,1.502,2.754,3.8735,4.914,6.8905,8.7925,10.572,12.277]},"oracle":{"share":[0.4604,0.673,0.8962,0.9836,0.9994,1.0,1.0,1.0,1.0],"lo":[0.2899,0.4998,0.7682,0.9195,0.9909,1.0,1.0,1.0,1.0],"hi":[0.6666,0.8451,0.9897,1.0,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,30.0,32.0,32.0,32.0,32.0,32.0]}},"vs":{"threshold":{"mean":[0.014,0.0333,0.0698,0.1249,0.1736,0.2014,0.2232,0.2453,0.2728],"lo":[-0.1533,-0.147,-0.1446,-0.1169,-0.0892,-0.1418,-0.1667,-0.159,-0.1503],"hi":[0.3891,0.4304,0.4729,0.5436,0.576,0.6023,0.6153,0.6503,0.663],"wins":[0.2997,0.3699,0.5133,0.6835,0.8021,0.8327,0.8479,0.8884,0.9065],"half":[0.0229,0.0226,0.0224,0.0223,0.0222,0.022,0.0219,0.0219,0.0219],"n":[1835,1887,1919,1937,1945,1991,1999,1999,2000],"need":[1,5,19,68,93,150,197,238,253]},"uncertainty":{"mean":[0.035,0.0338,0.0852,0.1069,0.1369,0.1694,0.2154,0.251,0.24],"lo":[-0.1055,-0.1317,-0.1024,-0.1102,-0.1013,-0.1176,-0.0928,-0.0581,-0.0575],"hi":[0.3953,0.4204,0.4942,0.5169,0.5442,0.5767,0.5998,0.6374,0.6088],"wins":[0.3844,0.3623,0.5404,0.6062,0.6926,0.7861,0.8628,0.9197,0.9149],"half":[0.024,0.0227,0.0226,0.0223,0.0222,0.022,0.022,0.022,0.0219],"n":[1670,1866,1880,1935,1942,1982,1990,1993,1998],"need":[1,6,22,46,80,122,139,181,200]}}},"adversarial":{"policies":{"random":{"share":[0.0,0.0,0.0019,0.0226,0.0295,0.0672,0.1435,0.1998,0.2412],"lo":[0.0,0.0,0.0,0.0,0.0,0.0,0.0123,0.0319,0.049],"hi":[0.0,0.0,0.0226,0.1558,0.1939,0.3033,0.4371,0.5123,0.5683],"caught":[0.0,0.0,0.0,1.0,1.0,2.0,5.0,7.0,8.0]},"threshold":{"share":[0.0658,0.0916,0.1303,0.1383,0.1443,0.2023,0.2502,0.2902,0.3175],"lo":[0.0,0.0019,0.0104,0.0108,0.0152,0.0378,0.0578,0.0796,0.0838],"hi":[0.2613,0.31,0.3721,0.3964,0.4069,0.5115,0.571,0.6054,0.6388],"caught":[2.0,3.0,5.0,5.0,5.0,7.0,9.0,10.0,11.0]},"uncertainty":{"share":[0.0418,0.0895,0.1174,0.1603,0.1838,0.2384,0.2633,0.2918,0.3532],"lo":[0.0,0.0013,0.0064,0.0208,0.0276,0.0487,0.0576,0.0716,0.1095],"hi":[0.1984,0.3126,0.3587,0.4347,0.4845,0.5494,0.5838,0.6219,0.6887],"caught":[2.0,4.0,4.0,6.0,6.0,8.0,9.0,10.0,11.0]},"expected-harm":{"share":[0.0734,0.1213,0.1903,0.2478,0.3002,0.3859,0.4587,0.524,0.5782],"lo":[0.0,0.0,0.0,0.0,0.0,0.0433,0.1086,0.1632,0.2418],"hi":[0.428,0.499,0.5824,0.632,0.6781,0.7372,0.7766,0.82,0.8524],"caught":[0.709,1.336,2.403,3.424,4.3825,6.223,7.965,9.6765,11.2995]},"oracle":{"share":[0.4639,0.6766,0.8979,0.9841,0.9994,1.0,1.0,1.0,1.0],"lo":[0.2942,0.5044,0.7683,0.9186,0.9912,1.0,1.0,1.0,1.0],"hi":[0.6777,0.8463,0.9907,1.0,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,30.0,32.0,32.0,32.0,32.0,32.0]}},"vs":{"threshold":{"mean":[0.0076,0.0297,0.06,0.1096,0.1559,0.1835,0.2085,0.2337,0.2607],"lo":[-0.1569,-0.1449,-0.1509,-0.1262,-0.1033,-0.1479,-0.1715,-0.1745,-0.1779],"hi":[0.3643,0.4049,0.4731,0.5294,0.57,0.5957,0.6122,0.6383,0.6718],"wins":[0.2552,0.3503,0.4736,0.6378,0.7596,0.8046,0.8324,0.8619,0.8859],"half":[0.0229,0.0225,0.0223,0.0222,0.0222,0.022,0.0219,0.0219,0.0219],"n":[1838,1901,1934,1941,1947,1991,1999,1999,1999],"need":[1,3,15,60,87,144,177,232,247]},"uncertainty":{"mean":[0.0316,0.0319,0.0728,0.0875,0.1165,0.1475,0.1954,0.2322,0.225],"lo":[-0.1001,-0.127,-0.11,-0.119,-0.1051,-0.1376,-0.1059,-0.0841,-0.0836],"hi":[0.3939,0.4074,0.4804,0.512,0.5351,0.5608,0.596,0.6268,0.615],"wins":[0.3437,0.3496,0.4926,0.5437,0.6404,0.7336,0.8246,0.881,0.8869],"half":[0.024,0.0226,0.0225,0.0222,0.0222,0.022,0.022,0.022,0.0219],"n":[1670,1885,1904,1944,1952,1982,1990,1992,1999],"need":[1,5,14,34,65,119,136,177,197]}}}},"jev-typesafe_jev-1.13":{"uniform":{"policies":{"random":{"share":[0.0501,0.0789,0.0839,0.1138,0.142,0.2109,0.2806,0.3067,0.3474],"lo":[0.0,0.0,0.0,0.0,0.0,0.0556,0.1111,0.1333,0.1667],"hi":[0.1429,0.2,0.2083,0.25,0.2917,0.375,0.4583,0.4815,0.5312],"caught":[1.0,2.0,2.0,3.0,4.0,5.0,7.0,8.0,9.0]},"threshold":{"share":[0.0004,0.0095,0.0731,0.105,0.1641,0.3194,0.4633,0.625,0.6799],"lo":[0.0,0.0,0.0,0.0,0.037,0.1379,0.2609,0.4118,0.48],"hi":[0.0,0.0833,0.1905,0.24,0.3333,0.5217,0.6667,0.8182,0.8571],"caught":[0.0,0.0,2.0,3.0,4.0,8.0,12.0,16.0,17.0]},"uncertainty":{"share":[0.0897,0.1295,0.2183,0.3183,0.3807,0.4891,0.5951,0.6456,0.696],"lo":[0.0,0.0333,0.08,0.1579,0.2083,0.3,0.4,0.4545,0.5172],"hi":[0.2,0.2593,0.3704,0.5,0.5652,0.6667,0.7826,0.8261,0.8696],"caught":[2.0,3.0,6.0,8.0,9.0,12.0,15.0,16.0,17.0]},"expected-harm":{"share":[0.0897,0.1295,0.2183,0.3183,0.3807,0.4891,0.5951,0.6456,0.696],"lo":[0.0,0.0333,0.08,0.1579,0.2083,0.3,0.4,0.4545,0.5172],"hi":[0.2,0.2593,0.3704,0.5,0.5652,0.6667,0.7826,0.8261,0.8696],"caught":[2.0,3.0,6.0,8.0,9.0,12.0,15.0,16.0,17.0]},"oracle":{"share":[0.2073,0.4147,0.8117,0.989,0.9999,1.0,1.0,1.0,1.0],"lo":[0.1429,0.2857,0.5714,0.8571,1.0,1.0,1.0,1.0,1.0],"hi":[0.3125,0.625,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,25.0,25.0,25.0,25.0,25.0,25.0]}},"vs":{"threshold":{"mean":[0.0893,0.1199,0.1453,0.2133,0.2166,0.1697,0.1318,0.0206,0.0161],"lo":[0.0,0.0,-0.0476,0.0,0.0,-0.0526,-0.0476,-0.1053,-0.0513],"hi":[0.2,0.25,0.3333,0.4286,0.45,0.3913,0.3333,0.2143,0.125],"wins":[0.9995,0.9886,0.956,0.9847,0.983,0.9479,0.945,0.5817,0.8243],"half":[0.0228,0.0223,0.0226,0.0221,0.0223,0.0224,0.0229,0.0272,0.0356],"n":[1853,1935,1887,1959,1939,1919,1838,1298,757],"need":[21,32,45,57,67,81,93,98,108]},"uncertainty":{"mean":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"lo":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"hi":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"wins":[null,null,null,null,null,null,null,null,null],"half":[null,null,null,null,null,null,null,null,null],"n":[0,0,0,0,0,0,0,0,0],"need":[2,7,17,27,35,55,74,85,109]}}},"lognormal":{"policies":{"random":{"share":[0.0495,0.0778,0.0832,0.113,0.1411,0.21,0.2794,0.3054,0.3478],"lo":[0.0,0.0,0.0,0.0,0.0,0.0176,0.0505,0.068,0.0869],"hi":[0.2722,0.3539,0.3606,0.4179,0.457,0.5751,0.6507,0.6791,0.7136],"caught":[1.0,2.0,2.0,3.0,4.0,5.0,7.0,8.0,9.0]},"threshold":{"share":[0.0004,0.0098,0.0727,0.1058,0.1643,0.3193,0.4626,0.6259,0.6814],"lo":[0.0,0.0,0.0,0.0,0.0073,0.0665,0.1479,0.2705,0.337],"hi":[0.0,0.11,0.3146,0.397,0.497,0.6922,0.8082,0.9076,0.9303],"caught":[0.0,0.0,2.0,3.0,4.0,8.0,12.0,16.0,17.0]},"uncertainty":{"share":[0.0876,0.1267,0.216,0.3154,0.3775,0.4879,0.5946,0.645,0.6978],"lo":[0.0,0.0034,0.0273,0.0745,0.1076,0.1855,0.2726,0.3011,0.3483],"hi":[0.3668,0.4098,0.5442,0.6596,0.7187,0.82,0.8824,0.9141,0.9387],"caught":[2.0,3.0,6.0,8.0,9.0,12.0,15.0,16.0,17.0]},"expected-harm":{"share":[0.1496,0.234,0.3544,0.4406,0.5091,0.6138,0.6898,0.7483,0.7986],"lo":[0.0,0.0,0.0,0.058,0.1136,0.2501,0.3444,0.4372,0.5133],"hi":[0.5836,0.6893,0.7586,0.7977,0.8268,0.886,0.916,0.9397,0.963],"caught":[1.0685,1.983,3.6715,5.216,6.6445,9.217,11.3725,13.263,14.933]},"oracle":{"share":[0.521,0.7475,0.9545,0.9981,1.0,1.0,1.0,1.0,1.0],"lo":[0.3351,0.5593,0.8401,0.9763,1.0,1.0,1.0,1.0,1.0],"hi":[0.7532,0.9133,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,25.0,25.0,25.0,25.0,25.0,25.0]}},"vs":{"threshold":{"mean":[0.1492,0.2242,0.2818,0.3348,0.3448,0.2945,0.2272,0.1224,0.1172],"lo":[0.0,-0.0279,-0.0895,-0.0648,-0.0484,-0.0449,-0.0713,-0.1221,-0.0965],"hi":[0.5836,0.6855,0.7139,0.7432,0.7441,0.7133,0.6574,0.5385,0.4915],"wins":[0.9946,0.9485,0.9107,0.9468,0.9574,0.9449,0.8943,0.6901,0.6871],"half":[0.0293,0.0244,0.0221,0.022,0.0219,0.0219,0.0219,0.022,0.0222],"n":[1121,1613,1959,1992,1996,1998,1997,1981,1956],"need":[21,44,63,74,82,93,103,199,234]},"uncertainty":{"mean":[0.062,0.1072,0.1384,0.1252,0.1316,0.1258,0.0953,0.1033,0.1009],"lo":[-0.1667,-0.1627,-0.1705,-0.1978,-0.1771,-0.1434,-0.1571,-0.1351,-0.1054],"hi":[0.511,0.589,0.593,0.6001,0.5904,0.564,0.5201,0.5001,0.4793],"wins":[0.4548,0.5979,0.6947,0.6747,0.6927,0.6905,0.6417,0.6399,0.6347],"half":[0.0229,0.0223,0.0221,0.022,0.022,0.022,0.022,0.022,0.0221],"n":[1827,1930,1972,1986,1982,1987,1987,1977,1960],"need":[2,16,29,43,56,75,96,117,166]}}},"adversarial":{"policies":{"random":{"share":[0.037,0.0612,0.0661,0.0939,0.123,0.1927,0.2646,0.2926,0.3392],"lo":[0.0,0.0,0.0,0.0,0.0,0.0146,0.0473,0.0632,0.0837],"hi":[0.2116,0.2978,0.3008,0.3684,0.4116,0.5548,0.6343,0.6753,0.7085],"caught":[1.0,2.0,2.0,3.0,4.0,5.0,7.0,8.0,9.0]},"threshold":{"share":[0.0004,0.01,0.0719,0.1015,0.156,0.3086,0.427,0.5797,0.632],"lo":[0.0,0.0,0.0,0.0,0.0063,0.0622,0.1239,0.2286,0.282],"hi":[0.0,0.1083,0.325,0.3845,0.4886,0.6827,0.7815,0.8872,0.9134],"caught":[0.0,0.0,2.0,3.0,4.0,8.0,12.0,16.0,17.0]},"uncertainty":{"share":[0.0681,0.1005,0.1832,0.2682,0.3234,0.4302,0.5377,0.591,0.6508],"lo":[0.0,0.0028,0.0211,0.0596,0.0883,0.1514,0.2206,0.248,0.2924],"hi":[0.2923,0.345,0.4858,0.6046,0.6718,0.7771,0.8535,0.8885,0.9262],"caught":[2.0,3.0,6.0,8.0,9.0,12.0,15.0,16.0,17.0]},"expected-harm":{"share":[0.1271,0.2008,0.3122,0.3965,0.4631,0.5703,0.6503,0.7157,0.7694],"lo":[0.0,0.0,0.0,0.0314,0.0868,0.1912,0.2895,0.3753,0.4677],"hi":[0.5673,0.66,0.7347,0.7722,0.809,0.8705,0.9028,0.933,0.9539],"caught":[0.917,1.7265,3.2395,4.652,5.9555,8.393,10.506,12.474,14.226]},"oracle":{"share":[0.5259,0.7523,0.9558,0.9982,1.0,1.0,1.0,1.0,1.0],"lo":[0.3388,0.5703,0.8435,0.9772,1.0,1.0,1.0,1.0,1.0],"hi":[0.7537,0.9148,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"caught":[5.0,10.0,20.0,25.0,25.0,25.0,25.0,25.0,25.0]}},"vs":{"threshold":{"mean":[0.1267,0.1909,0.2403,0.295,0.3071,0.2617,0.2232,0.1359,0.1374],"lo":[0.0,-0.0295,-0.114,-0.0731,-0.0706,-0.0735,-0.0946,-0.1481,-0.1195],"hi":[0.5673,0.658,0.694,0.7218,0.7186,0.7013,0.6605,0.5835,0.5458],"wins":[0.992,0.9341,0.88,0.9285,0.9372,0.9045,0.8749,0.6899,0.698],"half":[0.0309,0.0252,0.0222,0.022,0.022,0.0219,0.0219,0.022,0.022],"n":[1005,1518,1941,1985,1991,1999,1998,1993,1977],"need":[1,40,55,71,80,93,104,208,258]},"uncertainty":{"mean":[0.0591,0.1003,0.129,0.1283,0.1397,0.1401,0.1125,0.1246,0.1186],"lo":[-0.1574,-0.1563,-0.1755,-0.1909,-0.1861,-0.1583,-0.1639,-0.1479,-0.1317],"hi":[0.5111,0.5915,0.5953,0.6105,0.6068,0.5996,0.5595,0.5525,0.5257],"wins":[0.4279,0.5687,0.6576,0.6611,0.6909,0.6984,0.6513,0.6626,0.6477],"half":[0.0228,0.0222,0.022,0.022,0.022,0.0219,0.0219,0.022,0.022],"n":[1851,1950,1983,1992,1993,1996,1999,1989,1981],"need":[1,14,29,45,58,77,102,121,171]}}}}}}</script>
+<script>
+(function(){
+  "use strict";
+  var D = JSON.parse(document.getElementById("demo-data").textContent);
+  var M = D.meta;
+  var VISIBLE = 8;                       // rows shown before the disclosure opens
+  var state = {
+    hi: M.budget_hours.indexOf(4) >= 0 ? M.budget_hours.indexOf(4) : 0,
+    arm: M.arm_order[0],
+    regime: "lognormal",
+    openEH: false,
+    openTH: false
+  };
+  var REGIME_HINT = {
+    uniform: "Every mistake costs the same. Expected harm collapses into confidence, so the two policies become one policy.",
+    lognormal: "A heavy tail: a few cases carry most of the exposure. The usual real shape.",
+    adversarial: "The expensive cases are the ones the model feels surest about. The stress case, not the flattering one."
+  };
+  var POLICY = {
+    "expected-harm": ["Expected harm", "P(wrong) × cost. The proposal.", "--dot-green"],
+    "uncertainty":   ["Confidence only", "Least-confident first. Triage as most tools ship it.", "--dot-gold"],
+    "threshold":     ["Fixed cutoff", "A confidence threshold, then arrival order. What most teams actually run.", "--dot-red"],
+    "random":        ["No ranking", "The floor.", "--dot-beige"],
+    "oracle":        ["Perfect hindsight", "The ceiling. Needs the answer key the ranker never has.", "--dot-blue"]
+  };
+  var ORDER = ["expected-harm", "uncertainty", "threshold", "random", "oracle"];
+
+  function pct(x){ return x === null || x === undefined ? "—" : (x * 100).toFixed(1) + "%"; }
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function block(){ return D.bootstrap[state.arm][state.regime]; }
+  function k(){ return M.budget_k[state.hi]; }
+  function hours(){ return M.budget_hours[state.hi]; }
+  function hoursText(h){ return h === 1 ? "1 hour" : (h + " hours"); }
+
+  // -------------------------------------------------------------- rankings
+  // One cost draw, deliberately. Ties break on index so every policy is deterministic,
+  // exactly as budget.py does it.
+  function ranked(policy){
+    var costs = D.costs_draw[state.regime];
+    var pw = D.arms[state.arm].p_wrong;
+    var idx = [], i;
+    for (i = 0; i < D.ids.length; i++) idx.push(i);
+    var key;
+    if (policy === "expected-harm") key = function(i){ return pw[i] * costs[i]; };
+    else if (policy === "uncertainty") key = function(i){ return pw[i]; };
+    else key = function(i){ return pw[i] > 0.10 ? 1 : 0; };
+    idx.sort(function(a, b){ return (key(b) - key(a)) || (a - b); });
+    return idx.slice(0, k());
+  }
+
+  var medianCost = (function(){
+    var out = {};
+    Object.keys(D.costs_draw).forEach(function(rg){
+      var v = D.costs_draw[rg].slice().sort(function(a, b){ return a - b; });
+      out[rg] = v[Math.floor(v.length / 2)] || 1;
+    });
+    return out;
+  })();
+
+  // Total harm sitting in the queue on THIS draw, so a list can report its own score.
+  function drawHarm(){
+    var costs = D.costs_draw[state.regime], wrong = D.arms[state.arm].wrong, t = 0;
+    for (var i = 0; i < wrong.length; i++) if (wrong[i]) t += costs[i];
+    return t;
+  }
+
+  function renderList(node, moreBtn, moreText, list, open){
+    node.innerHTML = "";
+    var pw = D.arms[state.arm].p_wrong, wrong = D.arms[state.arm].wrong;
+    var costs = D.costs_draw[state.regime];
+    var shown = open ? list.length : Math.min(VISIBLE, list.length);
+
+    var hit = 0, harm = 0;
+    list.forEach(function(i){ if (wrong[i]){ hit++; harm += costs[i]; } });
+    var score = el("p", "list-score");
+    score.appendChild(el("strong", null, hit + " of these " + list.length + " were actually wrong"));
+    score.appendChild(el("span", null, ", and opening them averts " +
+      (drawHarm() ? (harm / drawHarm() * 100).toFixed(0) : "0") + "% of this draw’s damage."));
+    if (list.length) node.appendChild(score);
+
+    if (!list.length){
+      node.appendChild(el("p", "empty", "No cases at this budget. Raise the reviewer hours."));
+    }
+    for (var r = 0; r < shown; r++){
+      var i = list[r];
+      var row = el("div", "case");
+      row.appendChild(el("span", "case-rank", (r + 1) + "."));
+      var body = el("div");
+      body.appendChild(el("div", "case-q", D.questions[i]));
+      var meta = el("div", "case-meta");
+      var dot = el("span", "dot");
+      dot.style.background = wrong[i] ? "var(--dot-red)" : "var(--dot-beige)";
+      meta.appendChild(dot);
+      meta.appendChild(el("span", wrong[i] ? "was-wrong" : "was-right",
+        wrong[i] ? "answered wrong" : "answered right"));
+      meta.appendChild(el("span", null, "P(wrong) " + pw[i].toFixed(2)));
+      meta.appendChild(el("span", null, "cost " + (costs[i] / medianCost[state.regime]).toFixed(1) + "× median"));
+      body.appendChild(meta);
+      row.appendChild(body);
+      node.appendChild(row);
+    }
+    var hidden = list.length - shown;
+    moreBtn.hidden = list.length <= VISIBLE;
+    moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    moreText.textContent = open ? "Collapse to the top " + VISIBLE
+                                : "Show all " + list.length + " cases (" + hidden + " more)";
+  }
+
+  // -------------------------------------------------------------- render
+  function render(){
+    var b = block(), i = state.hi;
+
+    document.getElementById("hours-value").textContent = hoursText(hours());
+    document.getElementById("hours-desc").textContent =
+      "Stop " + (i + 1) + " of " + M.budget_hours.length + " · " + k() +
+      " reviews at " + M.review_minutes + " minutes each, " +
+      Math.round(k() / M.n_cases * 100) + "% of the " + M.n_cases + "-case queue";
+    var rangeEl = document.getElementById("hours");
+    rangeEl.value = i;
+    rangeEl.setAttribute("aria-valuetext", hoursText(hours()) + ", " + k() + " reviews");
+    document.getElementById("hours-down").disabled = (i === 0);
+    document.getElementById("hours-up").disabled = (i === M.budget_hours.length - 1);
+    document.getElementById("regime-hint").textContent = REGIME_HINT[state.regime];
+    document.getElementById("buys-sub").textContent =
+      hoursText(hours()) + " on " + M.arm_labels[state.arm] + ", " + state.regime + " costs";
+
+    var rows = document.getElementById("rows");
+    rows.innerHTML = "";
+    ORDER.forEach(function(p, n){
+      var spec = POLICY[p], s = b.policies[p];
+      var row = el("div", "row" + (n === 0 ? " lead-row" : ""));
+      var dot = el("span", "dot");
+      dot.style.background = "var(" + spec[2] + ")";
+      row.appendChild(dot);
+      row.appendChild(el("span", "row-name", spec[0]));
+      row.appendChild(el("span", "row-note", spec[1]));
+      var num = el("span", "row-num", pct(s.share[i]));
+      row.appendChild(num);
+      rows.appendChild(row);
+    });
+
+    var eh = b.policies["expected-harm"], un = b.policies["uncertainty"];
+    var vsTh = b.vs.threshold, vsUn = b.vs.uncertainty;
+    var caught = document.getElementById("caught-line");
+    var need = vsTh.need[i];
+    var parts = [];
+    parts.push("Harm averted is the share of this queue’s total damage that review prevents, " +
+               "averaged over " + M.replicates + " redraws of the cases and the costs.");
+    if (need){
+      parts.push("To reach what expected harm reaches, the fixed cutoff needs a median " + need +
+                 " reviews, " + (need / k()).toFixed(1) + "× the budget, " +
+                 (need * M.review_minutes / 60).toFixed(1) + " hours instead of " + hours() + ".");
+    }
+    if (state.regime === "uniform"){
+      parts.push("Under flat costs expected harm and confidence-only are the same policy by " +
+                 "construction, which is what cost-awareness is worth when cost carries no information.");
+    } else {
+      parts.push("Expected harm opens " + eh.caught[i].toFixed(1) + " wrong cases against " +
+                 "confidence-only’s " + un.caught[i].toFixed(1) + ", and still comes out " +
+                 ((eh.share[i] - un.share[i]) * 100).toFixed(0) + " points ahead. Fewer errors caught, " +
+                 "more harm prevented: counting errors is the wrong scoreboard.");
+    }
+    caught.textContent = parts.join(" ");
+
+    var dir = document.getElementById("limit-direction");
+    if (vsUn.wins[i] === null || vsUn.n[i] === 0){
+      dir.textContent = "In this cost regime expected harm and confidence-only are identical by " +
+        "construction, so there is no difference to test. Against the fixed cutoff the mean gap is " +
+        pct(vsTh.mean[i]) + ", 95% [" + pct(vsTh.lo[i]) + ", " + pct(vsTh.hi[i]) + "].";
+    } else {
+      dir.textContent = "The mean gap over confidence-only is " + pct(vsUn.mean[i]) +
+        " with a 95% range of [" + pct(vsUn.lo[i]) + ", " + pct(vsUn.hi[i]) + "], which straddles zero: " +
+        "under a heavy tail one expensive error can carry a third of the queue’s harm, so the " +
+        "magnitude swings on the draw. The direction is the part that holds, and on a paired design " +
+        "it is a sign test: expected harm won " + Math.round(vsUn.wins[i] * 100) + "% of " + vsUn.n[i] +
+        " resamples. Read that as “stable under resampling”, never as “established”.";
+    }
+
+    var listEH = ranked("expected-harm"), listTH = ranked("threshold");
+    var setTH = {}, both = 0;
+    listTH.forEach(function(x){ setTH[x] = 1; });
+    listEH.forEach(function(x){ if (setTH[x]) both++; });
+    document.getElementById("overlap-line").textContent =
+      "At " + hoursText(hours()) + " both policies open " + k() + " cases. " +
+      (both === 0
+        ? "Not one case appears on both lists. The two teams spend the same day on entirely different work."
+        : both + " of the " + k() + " appear on both lists, so " + (k() - both) +
+          " of the cases one team opens, the other never sees.") +
+      " The lists come from a single cost draw; the percentages above do not.";
+
+    renderList(document.getElementById("list-eh"), document.getElementById("more-eh"),
+               document.getElementById("more-eh-text"), listEH, state.openEH);
+    renderList(document.getElementById("list-th"), document.getElementById("more-th"),
+               document.getElementById("more-th-text"), listTH, state.openTH);
+  }
+
+  // -------------------------------------------------------------- controls
+  function segment(node, values, labelFor, get, set){
+    values.forEach(function(v){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.textContent = labelFor(v);
+      b.addEventListener("click", function(){ set(v); paintSeg(); render(); });
+      b.addEventListener("keydown", function(e){
+        var n = values.indexOf(v), t = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") t = (n + 1) % values.length;
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") t = (n - 1 + values.length) % values.length;
+        if (t === null) return;
+        e.preventDefault();
+        set(values[t]); paintSeg(); render();
+        node.children[t].focus();
+      });
+      node.appendChild(b);
+    });
+    node._sync = function(){
+      values.forEach(function(v, n){
+        var on = get() === v;
+        node.children[n].setAttribute("aria-checked", on ? "true" : "false");
+        node.children[n].tabIndex = on ? 0 : -1;
+      });
+    };
+  }
+  var armNode = document.getElementById("arm"), regimeNode = document.getElementById("regime");
+  segment(armNode, M.arm_order, function(a){ return M.arm_labels[a]; },
+          function(){ return state.arm; }, function(v){ state.arm = v; });
+  segment(regimeNode, M.regimes, function(r){ return r; },
+          function(){ return state.regime; }, function(v){ state.regime = v; });
+  function paintSeg(){ armNode._sync(); regimeNode._sync(); }
+
+  document.getElementById("hours").addEventListener("input", function(e){
+    state.hi = parseInt(e.target.value, 10); render();
+  });
+  document.getElementById("hours-down").addEventListener("click", function(){
+    if (state.hi > 0){ state.hi--; render(); }
+  });
+  document.getElementById("hours-up").addEventListener("click", function(){
+    if (state.hi < M.budget_hours.length - 1){ state.hi++; render(); }
+  });
+  document.getElementById("more-eh").addEventListener("click", function(){
+    state.openEH = !state.openEH; render();
+  });
+  document.getElementById("more-th").addEventListener("click", function(){
+    state.openTH = !state.openTH; render();
+  });
+  var proj = document.getElementById("projection");
+  proj.addEventListener("click", function(){
+    var on = document.body.classList.toggle("projection");
+    proj.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+
+  document.getElementById("stamp").textContent =
+    "Run " + M.generated + " · " + M.n_cases + " cases · " + M.replicates +
+    " replicates · no network calls, no data leaves this page.";
+  paintSeg();
+  render();
+})();
+</script>
+</body>
+</html>

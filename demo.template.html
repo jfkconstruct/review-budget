@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Review Budget</title>
+<meta name="description" content="Same reviewer hours, pointed differently: which cases a review queue opens, and what the choice prevents.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+<!-- gallery-style: aurelius-workflow -->
+<style>
+:root{
+  --ru: 12px;
+  --bg: #FFFFFF;
+  --ink: #233534;
+  --muted: #5B6B69;
+  --rule: #E7ECEB;
+  --dot-green: #1F9A52;
+  --dot-red: #FF4B3E;
+  --dot-gold: #B9922E;
+  --dot-blue: #9FB1BC;
+  --dot-beige: #E7E0D9;
+  /* Text-safe darkening of the alert dot: the dot colours run 3.4:1 at best on white,
+     so a dot colour is never reused as type. #B3261E is 6.5:1. */
+  --text-red: #B3261E;
+  --pad-x: clamp(20px, 6vw, 120px);
+  --scale: 1;
+}
+/* Type scales are clamp()-based per the module's no-breakpoint technique; --scale is
+   the projection-mode multiplier layered on top, not a replacement for it. */
+*{ box-sizing: border-box; }
+html{ -webkit-text-size-adjust: 100%; }
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: calc(15px * var(--scale));
+  line-height: 1.55;
+  font-weight: 400;
+}
+body.projection{ --scale: 1.28; }
+.serif{ font-family: Newsreader, ui-serif, Georgia, Cambria, "Times New Roman", serif; font-weight: 500; }
+.muted{ color: var(--muted); }
+.rule{ border-bottom: 1px solid var(--rule); }
+.page{
+  padding-left: max(var(--pad-x), env(safe-area-inset-left));
+  padding-right: max(var(--pad-x), env(safe-area-inset-right));
+  padding-bottom: calc(var(--ru) * 6 + env(safe-area-inset-bottom));
+  max-width: 1180px;
+  margin: 0 auto;
+}
+section{ margin-top: calc(var(--ru) * 5); scroll-margin-top: 180px; }
+.label{
+  font-size: calc(11px * var(--scale));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+.dot{ display: inline-block; width: 0.72em; height: 0.72em; border-radius: 50%; flex: none; }
+.skip{
+  position: absolute; left: -9999px; top: 0; background: var(--ink); color: #fff;
+  padding: 10px 16px; z-index: 20;
+}
+.skip:focus{ left: 8px; top: calc(8px + env(safe-area-inset-top)); }
+
+/* ---------------------------------------------------------------- header */
+header.top{
+  padding-top: calc(var(--ru) * 3 + env(safe-area-inset-top));
+  padding-bottom: calc(var(--ru) * 1.5);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
+}
+.brand{ font-size: calc(clamp(24px, 3vw, 30px) * var(--scale)); line-height: 1.1; }
+.top nav{ display: flex; align-items: center; gap: 18px; }
+
+/* ---------------------------------------------------------------- hero */
+h1{
+  font-family: Newsreader, ui-serif, Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(27px, 4.4vw, 50px);
+  line-height: 1.12;
+  margin: calc(var(--ru) * 3) 0 0;
+  max-width: 24ch;
+}
+.lede{ margin-top: 16px; max-width: 62ch; font-size: calc(16px * var(--scale)); color: var(--muted); }
+
+/* ---------------------------------------------------------------- controls */
+.controls{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  padding-top: calc(var(--ru) * 1.5 + env(safe-area-inset-top));
+  padding-bottom: calc(var(--ru) * 1.5);
+  margin-top: calc(var(--ru) * 5);
+}
+.ctl-grid{ display: grid; gap: calc(var(--ru) * 2); grid-template-columns: 1fr; }
+@media (min-width: 860px){ .ctl-grid{ grid-template-columns: 1.15fr 1fr 1fr; align-items: start; } }
+.ctl-head{ display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ctl-value{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(17px, 1.7vw, 20px) * var(--scale)); }
+.dial{ display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+input[type=range]{ flex: 1 1 auto; min-width: 0; accent-color: var(--ink); height: 32px; }
+button{
+  font: inherit; color: var(--ink); background: transparent;
+  border: 1px solid var(--rule); border-radius: 2px; cursor: pointer;
+  padding: 8px 14px; min-height: 44px;
+}
+button:hover:not(:disabled){ border-color: var(--muted); }
+button:disabled{ color: #9AA7A5; border-color: #F2F5F4; cursor: not-allowed; }
+.step{ width: 44px; padding: 0; font-size: calc(17px * var(--scale)); line-height: 1; }
+:focus-visible{ outline: 2px solid var(--ink); outline-offset: 2px; }
+.seg{ display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.seg [role=radio]{ padding: 8px 12px; min-height: 44px; }
+.seg [role=radio][aria-checked=true]{
+  background: var(--ink); color: #fff; border-color: var(--ink);
+}
+.hint{ margin-top: 8px; font-size: calc(12px * var(--scale)); color: var(--muted); }
+
+/* ---------------------------------------------------------------- rows */
+.row{
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  padding: calc(var(--ru) * 1.4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.row:last-child{ border-bottom: 0; }
+.row-name{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(20px, 2.4vw, 26px) * var(--scale)); line-height: 1.15; }
+.row-num{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(20px, 2.4vw, 26px) * var(--scale)); margin-left: auto; font-variant-numeric: tabular-nums; }
+.row-note{ flex: 1 1 22ch; max-width: 68ch; color: var(--muted); font-size: calc(13.5px * var(--scale)); }
+.lead-row .row-name, .lead-row .row-num{ font-size: calc(clamp(26px, 3.4vw, 36px) * var(--scale)); }
+
+/* ---------------------------------------------------------------- lists */
+.lists{ display: grid; gap: calc(var(--ru) * 3); grid-template-columns: 1fr; margin-top: calc(var(--ru) * 2); }
+@media (min-width: 860px){ .lists{ grid-template-columns: 1fr 1fr; gap: calc(var(--ru) * 4); } }
+.list-head{ border-bottom: 1px solid var(--ink); padding-bottom: 8px; }
+.list-title{ font-family: Newsreader, ui-serif, Georgia, serif; font-size: calc(clamp(19px, 2vw, 23px) * var(--scale)); }
+.list-score{
+  margin: 10px 0 0; padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+  font-size: calc(13.5px * var(--scale)); color: var(--muted);
+}
+.list-score strong{ color: var(--ink); font-weight: 500; }
+.case{ display: flex; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--rule); align-items: baseline; }
+.case-rank{ color: var(--muted); font-variant-numeric: tabular-nums; font-size: calc(12px * var(--scale)); min-width: 2.2em; }
+.case-q{ font-size: calc(clamp(13.5px, 1.1vw, 15px) * var(--scale)); line-height: 1.45; }
+.case-meta{ color: var(--muted); font-size: calc(12px * var(--scale)); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.was-wrong{ color: var(--text-red); font-weight: 500; }
+.was-right{ color: var(--muted); }
+.disclose{ margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; }
+.chev{ transition: transform 160ms ease; display: inline-block; }
+[aria-expanded=true] .chev{ transform: rotate(90deg); }
+.empty{ color: var(--muted); padding: 14px 0; font-size: calc(13.5px * var(--scale)); }
+
+/* ---------------------------------------------------------------- limits */
+.limits{ border-top: 2px solid var(--ink); padding-top: calc(var(--ru) * 1.5); }
+
+footer{ margin-top: calc(var(--ru) * 6); border-top: 1px solid var(--rule); padding-top: calc(var(--ru) * 2); color: var(--muted); font-size: calc(13px * var(--scale)); }
+code{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; background: #F5F7F7; padding: 1px 5px; border-radius: 2px; color: var(--ink); }
+a{ color: var(--ink); }
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{ transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#controls">Skip to the controls</a>
+<div class="page">
+
+  <header class="top rule">
+    <div class="serif brand">Review Budget</div>
+    <nav>
+      <span class="label">Field demo &middot; 2026-09-19</span>
+      <button id="projection" aria-pressed="false">Projection mode</button>
+    </nav>
+  </header>
+
+  <section id="top">
+    <h1>Four reviewer hours can avert a sixth of your queue&rsquo;s damage, or half of it.</h1>
+    <p class="lede">
+      Same hours, same queue, same people. The only difference is the order the cases are
+      opened in. Drag the dial and watch which cases each policy puts in front of a human.
+    </p>
+    <p class="lede">
+      <strong>What the queue is, plainly:</strong> 398 questions a language model answered
+      on its own, from a public benchmark that ships a correct answer for every row. The
+      answer key is the whole reason a number exists here. A demo run on your own documents
+      would output a confident ranked list nobody could check, which is the failure this
+      page argues against.
+    </p>
+  </section>
+
+  <section class="controls" id="controls" aria-label="Demo controls">
+    <div class="ctl-grid">
+
+      <div>
+        <div class="ctl-head">
+          <span class="label" id="hours-label">Reviewer budget</span>
+          <span class="ctl-value" id="hours-value">4 hours</span>
+        </div>
+        <div class="dial">
+          <button class="step" id="hours-down" aria-label="Fewer reviewer hours">&minus;</button>
+          <input type="range" id="hours" min="0" max="8" step="1" value="4"
+                 aria-labelledby="hours-label" aria-describedby="hours-desc"
+                 aria-valuetext="4 hours, 40 reviews">
+          <button class="step" id="hours-up" aria-label="More reviewer hours">+</button>
+        </div>
+        <div class="hint" id="hours-desc">Stop 5 of 9 &middot; 40 reviews at 6 minutes each, 10% of the queue</div>
+      </div>
+
+      <div>
+        <div class="ctl-head"><span class="label" id="arm-label">Model behind the queue</span></div>
+        <div class="seg" role="radiogroup" aria-labelledby="arm-label" id="arm"></div>
+        <div class="hint">Each model rewrites the list: the policy is identical, the probabilities are not.</div>
+      </div>
+
+      <div>
+        <div class="ctl-head"><span class="label" id="regime-label">Cost shape</span></div>
+        <div class="seg" role="radiogroup" aria-labelledby="regime-label" id="regime"></div>
+        <div class="hint" id="regime-hint">Invented, not measured. Three shapes, all reported.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="buys" aria-live="polite">
+    <div class="label">What the budget buys &middot; <span id="buys-sub">4 reviewer hours</span></div>
+    <div id="rows"></div>
+    <p class="hint" id="caught-line"></p>
+  </section>
+
+  <section id="which">
+    <div class="label">Which cases do you open today?</div>
+    <p class="lede" id="overlap-line"></p>
+    <div class="lists">
+      <div>
+        <div class="list-head">
+          <div class="list-title">Ranked by expected harm</div>
+          <div class="hint">P(wrong) &times; what the mistake costs</div>
+        </div>
+        <div id="list-eh"></div>
+        <button class="disclose" id="more-eh" aria-expanded="false" aria-controls="list-eh">
+          <span class="chev" aria-hidden="true">&rsaquo;</span><span id="more-eh-text"></span>
+        </button>
+      </div>
+      <div>
+        <div class="list-head">
+          <div class="list-title">Ranked by a fixed confidence cutoff</div>
+          <div class="hint">Everything under the cutoff, worked in arrival order</div>
+        </div>
+        <div id="list-th"></div>
+        <button class="disclose" id="more-th" aria-expanded="false" aria-controls="list-th">
+          <span class="chev" aria-hidden="true">&rsaquo;</span><span id="more-th-text"></span>
+        </button>
+      </div>
+    </div>
+    <p class="hint">
+      <span class="dot" style="background:var(--dot-red)"></span> the model got this one
+      wrong &nbsp;
+      <span class="dot" style="background:var(--dot-beige)"></span> the model got it right,
+      so the hour bought nothing. Outcomes come from the answer key and are known only
+      after the fact, never to the ranker.
+    </p>
+  </section>
+
+  <section id="limits" class="limits">
+    <div class="label">What this does not prove</div>
+    <div id="limit-rows">
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">Costs are invented</span>
+        <span class="row-note">Benchmark rows carry no dollar value. Three shapes run and all three are on the dial, because the shape of the cost distribution is a claim, not a measurement.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">Direction, not magnitude</span>
+        <span class="row-note" id="limit-direction"></span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">The interval has a knob in it</span>
+        <span class="row-note">Replicate count is a setting, so these ranges narrow without a single new labelled case arriving. They describe resampling of this 398-case queue and nothing wider.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">The reviewer is perfect</span>
+        <span class="row-note">Every wrong case a human opens is assumed fixed. That is an upper bound, applied identically to all five policies, so it flatters the rows equally.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">One task, one benchmark</span>
+        <span class="row-note">398 yes/no reading-comprehension questions. Nothing here has been shown to transfer to claims, tickets, or moderation without repeating the measurement on that data.</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--dot-blue)"></span>
+        <span class="row-name">The lists are one draw</span>
+        <span class="row-note">The two columns above use a single cost draw, because an average of 2000 draws is not a list you can read. The numbers under &ldquo;what the budget buys&rdquo; are the 2000-draw bootstrap, never this one.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      Every number on this page comes out of
+      <code>python budget.py --replicates 2000</code>, which calls no
+      API and replays a stored run. The write-up with the intervals and the sign tests is
+      <code>QUEUE.md</code>; the bake-off behind the probabilities is <code>RESULTS.md</code>.
+    </p>
+    <p id="stamp"></p>
+    <p>Built by Josiah Bujanda. More of the work: <a href="https://josiahbujanda.com">josiahbujanda.com</a>.</p>
+  </footer>
+</div>
+
+<script id="demo-data" type="application/json">/*__DEMO_DATA__*/</script>
+<script>
+(function(){
+  "use strict";
+  var D = JSON.parse(document.getElementById("demo-data").textContent);
+  var M = D.meta;
+  var VISIBLE = 8;                       // rows shown before the disclosure opens
+  var state = {
+    hi: M.budget_hours.indexOf(4) >= 0 ? M.budget_hours.indexOf(4) : 0,
+    arm: M.arm_order[0],
+    regime: "lognormal",
+    openEH: false,
+    openTH: false
+  };
+  var REGIME_HINT = {
+    uniform: "Every mistake costs the same. Expected harm collapses into confidence, so the two policies become one policy.",
+    lognormal: "A heavy tail: a few cases carry most of the exposure. The usual real shape.",
+    adversarial: "The expensive cases are the ones the model feels surest about. The stress case, not the flattering one."
+  };
+  var POLICY = {
+    "expected-harm": ["Expected harm", "P(wrong) × cost. The proposal.", "--dot-green"],
+    "uncertainty":   ["Confidence only", "Least-confident first. Triage as most tools ship it.", "--dot-gold"],
+    "threshold":     ["Fixed cutoff", "A confidence threshold, then arrival order. What most teams actually run.", "--dot-red"],
+    "random":        ["No ranking", "The floor.", "--dot-beige"],
+    "oracle":        ["Perfect hindsight", "The ceiling. Needs the answer key the ranker never has.", "--dot-blue"]
+  };
+  var ORDER = ["expected-harm", "uncertainty", "threshold", "random", "oracle"];
+
+  function pct(x){ return x === null || x === undefined ? "—" : (x * 100).toFixed(1) + "%"; }
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function block(){ return D.bootstrap[state.arm][state.regime]; }
+  function k(){ return M.budget_k[state.hi]; }
+  function hours(){ return M.budget_hours[state.hi]; }
+  function hoursText(h){ return h === 1 ? "1 hour" : (h + " hours"); }
+
+  // -------------------------------------------------------------- rankings
+  // One cost draw, deliberately. Ties break on index so every policy is deterministic,
+  // exactly as budget.py does it.
+  function ranked(policy){
+    var costs = D.costs_draw[state.regime];
+    var pw = D.arms[state.arm].p_wrong;
+    var idx = [], i;
+    for (i = 0; i < D.ids.length; i++) idx.push(i);
+    var key;
+    if (policy === "expected-harm") key = function(i){ return pw[i] * costs[i]; };
+    else if (policy === "uncertainty") key = function(i){ return pw[i]; };
+    else key = function(i){ return pw[i] > 0.10 ? 1 : 0; };
+    idx.sort(function(a, b){ return (key(b) - key(a)) || (a - b); });
+    return idx.slice(0, k());
+  }
+
+  var medianCost = (function(){
+    var out = {};
+    Object.keys(D.costs_draw).forEach(function(rg){
+      var v = D.costs_draw[rg].slice().sort(function(a, b){ return a - b; });
+      out[rg] = v[Math.floor(v.length / 2)] || 1;
+    });
+    return out;
+  })();
+
+  // Total harm sitting in the queue on THIS draw, so a list can report its own score.
+  function drawHarm(){
+    var costs = D.costs_draw[state.regime], wrong = D.arms[state.arm].wrong, t = 0;
+    for (var i = 0; i < wrong.length; i++) if (wrong[i]) t += costs[i];
+    return t;
+  }
+
+  function renderList(node, moreBtn, moreText, list, open){
+    node.innerHTML = "";
+    var pw = D.arms[state.arm].p_wrong, wrong = D.arms[state.arm].wrong;
+    var costs = D.costs_draw[state.regime];
+    var shown = open ? list.length : Math.min(VISIBLE, list.length);
+
+    var hit = 0, harm = 0;
+    list.forEach(function(i){ if (wrong[i]){ hit++; harm += costs[i]; } });
+    var score = el("p", "list-score");
+    score.appendChild(el("strong", null, hit + " of these " + list.length + " were actually wrong"));
+    score.appendChild(el("span", null, ", and opening them averts " +
+      (drawHarm() ? (harm / drawHarm() * 100).toFixed(0) : "0") + "% of this draw’s damage."));
+    if (list.length) node.appendChild(score);
+
+    if (!list.length){
+      node.appendChild(el("p", "empty", "No cases at this budget. Raise the reviewer hours."));
+    }
+    for (var r = 0; r < shown; r++){
+      var i = list[r];
+      var row = el("div", "case");
+      row.appendChild(el("span", "case-rank", (r + 1) + "."));
+      var body = el("div");
+      body.appendChild(el("div", "case-q", D.questions[i]));
+      var meta = el("div", "case-meta");
+      var dot = el("span", "dot");
+      dot.style.background = wrong[i] ? "var(--dot-red)" : "var(--dot-beige)";
+      meta.appendChild(dot);
+      meta.appendChild(el("span", wrong[i] ? "was-wrong" : "was-right",
+        wrong[i] ? "answered wrong" : "answered right"));
+      meta.appendChild(el("span", null, "P(wrong) " + pw[i].toFixed(2)));
+      meta.appendChild(el("span", null, "cost " + (costs[i] / medianCost[state.regime]).toFixed(1) + "× median"));
+      body.appendChild(meta);
+      row.appendChild(body);
+      node.appendChild(row);
+    }
+    var hidden = list.length - shown;
+    moreBtn.hidden = list.length <= VISIBLE;
+    moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    moreText.textContent = open ? "Collapse to the top " + VISIBLE
+                                : "Show all " + list.length + " cases (" + hidden + " more)";
+  }
+
+  // -------------------------------------------------------------- render
+  function render(){
+    var b = block(), i = state.hi;
+
+    document.getElementById("hours-value").textContent = hoursText(hours());
+    document.getElementById("hours-desc").textContent =
+      "Stop " + (i + 1) + " of " + M.budget_hours.length + " · " + k() +
+      " reviews at " + M.review_minutes + " minutes each, " +
+      Math.round(k() / M.n_cases * 100) + "% of the " + M.n_cases + "-case queue";
+    var rangeEl = document.getElementById("hours");
+    rangeEl.value = i;
+    rangeEl.setAttribute("aria-valuetext", hoursText(hours()) + ", " + k() + " reviews");
+    document.getElementById("hours-down").disabled = (i === 0);
+    document.getElementById("hours-up").disabled = (i === M.budget_hours.length - 1);
+    document.getElementById("regime-hint").textContent = REGIME_HINT[state.regime];
+    document.getElementById("buys-sub").textContent =
+      hoursText(hours()) + " on " + M.arm_labels[state.arm] + ", " + state.regime + " costs";
+
+    var rows = document.getElementById("rows");
+    rows.innerHTML = "";
+    ORDER.forEach(function(p, n){
+      var spec = POLICY[p], s = b.policies[p];
+      var row = el("div", "row" + (n === 0 ? " lead-row" : ""));
+      var dot = el("span", "dot");
+      dot.style.background = "var(" + spec[2] + ")";
+      row.appendChild(dot);
+      row.appendChild(el("span", "row-name", spec[0]));
+      row.appendChild(el("span", "row-note", spec[1]));
+      var num = el("span", "row-num", pct(s.share[i]));
+      row.appendChild(num);
+      rows.appendChild(row);
+    });
+
+    var eh = b.policies["expected-harm"], un = b.policies["uncertainty"];
+    var vsTh = b.vs.threshold, vsUn = b.vs.uncertainty;
+    var caught = document.getElementById("caught-line");
+    var need = vsTh.need[i];
+    var parts = [];
+    parts.push("Harm averted is the share of this queue’s total damage that review prevents, " +
+               "averaged over " + M.replicates + " redraws of the cases and the costs.");
+    if (need){
+      parts.push("To reach what expected harm reaches, the fixed cutoff needs a median " + need +
+                 " reviews, " + (need / k()).toFixed(1) + "× the budget, " +
+                 (need * M.review_minutes / 60).toFixed(1) + " hours instead of " + hours() + ".");
+    }
+    if (state.regime === "uniform"){
+      parts.push("Under flat costs expected harm and confidence-only are the same policy by " +
+                 "construction, which is what cost-awareness is worth when cost carries no information.");
+    } else {
+      parts.push("Expected harm opens " + eh.caught[i].toFixed(1) + " wrong cases against " +
+                 "confidence-only’s " + un.caught[i].toFixed(1) + ", and still comes out " +
+                 ((eh.share[i] - un.share[i]) * 100).toFixed(0) + " points ahead. Fewer errors caught, " +
+                 "more harm prevented: counting errors is the wrong scoreboard.");
+    }
+    caught.textContent = parts.join(" ");
+
+    var dir = document.getElementById("limit-direction");
+    if (vsUn.wins[i] === null || vsUn.n[i] === 0){
+      dir.textContent = "In this cost regime expected harm and confidence-only are identical by " +
+        "construction, so there is no difference to test. Against the fixed cutoff the mean gap is " +
+        pct(vsTh.mean[i]) + ", 95% [" + pct(vsTh.lo[i]) + ", " + pct(vsTh.hi[i]) + "].";
+    } else {
+      dir.textContent = "The mean gap over confidence-only is " + pct(vsUn.mean[i]) +
+        " with a 95% range of [" + pct(vsUn.lo[i]) + ", " + pct(vsUn.hi[i]) + "], which straddles zero: " +
+        "under a heavy tail one expensive error can carry a third of the queue’s harm, so the " +
+        "magnitude swings on the draw. The direction is the part that holds, and on a paired design " +
+        "it is a sign test: expected harm won " + Math.round(vsUn.wins[i] * 100) + "% of " + vsUn.n[i] +
+        " resamples. Read that as “stable under resampling”, never as “established”.";
+    }
+
+    var listEH = ranked("expected-harm"), listTH = ranked("threshold");
+    var setTH = {}, both = 0;
+    listTH.forEach(function(x){ setTH[x] = 1; });
+    listEH.forEach(function(x){ if (setTH[x]) both++; });
+    document.getElementById("overlap-line").textContent =
+      "At " + hoursText(hours()) + " both policies open " + k() + " cases. " +
+      (both === 0
+        ? "Not one case appears on both lists. The two teams spend the same day on entirely different work."
+        : both + " of the " + k() + " appear on both lists, so " + (k() - both) +
+          " of the cases one team opens, the other never sees.") +
+      " The lists come from a single cost draw; the percentages above do not.";
+
+    renderList(document.getElementById("list-eh"), document.getElementById("more-eh"),
+               document.getElementById("more-eh-text"), listEH, state.openEH);
+    renderList(document.getElementById("list-th"), document.getElementById("more-th"),
+               document.getElementById("more-th-text"), listTH, state.openTH);
+  }
+
+  // -------------------------------------------------------------- controls
+  function segment(node, values, labelFor, get, set){
+    values.forEach(function(v){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.textContent = labelFor(v);
+      b.addEventListener("click", function(){ set(v); paintSeg(); render(); });
+      b.addEventListener("keydown", function(e){
+        var n = values.indexOf(v), t = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") t = (n + 1) % values.length;
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") t = (n - 1 + values.length) % values.length;
+        if (t === null) return;
+        e.preventDefault();
+        set(values[t]); paintSeg(); render();
+        node.children[t].focus();
+      });
+      node.appendChild(b);
+    });
+    node._sync = function(){
+      values.forEach(function(v, n){
+        var on = get() === v;
+        node.children[n].setAttribute("aria-checked", on ? "true" : "false");
+        node.children[n].tabIndex = on ? 0 : -1;
+      });
+    };
+  }
+  var armNode = document.getElementById("arm"), regimeNode = document.getElementById("regime");
+  segment(armNode, M.arm_order, function(a){ return M.arm_labels[a]; },
+          function(){ return state.arm; }, function(v){ state.arm = v; });
+  segment(regimeNode, M.regimes, function(r){ return r; },
+          function(){ return state.regime; }, function(v){ state.regime = v; });
+  function paintSeg(){ armNode._sync(); regimeNode._sync(); }
+
+  document.getElementById("hours").addEventListener("input", function(e){
+    state.hi = parseInt(e.target.value, 10); render();
+  });
+  document.getElementById("hours-down").addEventListener("click", function(){
+    if (state.hi > 0){ state.hi--; render(); }
+  });
+  document.getElementById("hours-up").addEventListener("click", function(){
+    if (state.hi < M.budget_hours.length - 1){ state.hi++; render(); }
+  });
+  document.getElementById("more-eh").addEventListener("click", function(){
+    state.openEH = !state.openEH; render();
+  });
+  document.getElementById("more-th").addEventListener("click", function(){
+    state.openTH = !state.openTH; render();
+  });
+  var proj = document.getElementById("projection");
+  proj.addEventListener("click", function(){
+    var on = document.body.classList.toggle("projection");
+    proj.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+
+  document.getElementById("stamp").textContent =
+    "Run " + M.generated + " · " + M.n_cases + " cases · " + M.replicates +
+    " replicates · no network calls, no data leaves this page.";
+  paintSeg();
+  render();
+})();
+</script>
+</body>
+</html>
