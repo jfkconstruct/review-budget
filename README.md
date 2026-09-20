@@ -36,32 +36,23 @@ Open Case A first. A confidence cutoff would send your reviewer to Case B.
 
 ## Same four hours, different outcome
 
-Same AI. Same cases. Same 40 reviews. The only difference is how the 40 were chosen.
-
 ```
-                SAME 40 REVIEWS, ONE COST DRAW
+                 SAME 40 REVIEWS
 
-Fixed confidence cutoff                 Review Budget
------------------------                 -------------
-can an odd number be divided            is there a difference between
-  by an even number                       doves and pigeons
-is there a disorder for being           does a fried egg have a runny yolk
-  obsessed with someone                 do competitive inhibitors bind
-is the enchanted forest in                to the active site
-  oregon still open                     was the movie insomnia based
-is a pickle the same as a gherkin         on a book
-...                                     ...
-
-4 of 40 were actually wrong             6 of 40 were actually wrong
-17% of the damage prevented             48% of the damage prevented
+Fixed confidence cutoff          Review Budget
+-----------------------          -------------
+4 mistakes found                 6 mistakes found
+17% of the damage prevented      48% of the damage prevented
 ```
+
+Same model. Same queue. Same human review budget. Only the ranking policy changed.
 
 The cutoff list is every case the model was under 90% sure about, worked in arrival order.
 The Review Budget list is ranked by chance-wrong times cost. They barely overlap.
 
-The screenshot above is one cost draw. Across 2,000 resampled draws the gap holds: about a
-sixth of the queue's damage prevented under the cutoff, about half under Review Budget, and
-Review Budget wins in 96% of draws.
+Those are the numbers on one cost draw, the one in the screenshot. Across 2,000 resampled
+draws the gap holds: about a sixth of the queue's damage prevented under the cutoff, about
+half under Review Budget, and Review Budget wins in 96% of draws.
 
 ## Where this came from
 
@@ -78,9 +69,10 @@ time sends your reviewer to the wrong cases and lets the expensive mistake throu
 The domain is specific. The allocation problem is not. Insurance claims, financial reviews,
 fraud queues, document checks, AI-generated work, support escalations: whenever AI can
 process more cases than humans can inspect, someone decides where human review is worth the
-most. Review Budget is that decision, written down and measured.
+most. Review Budget turns limited human review time into a ranked queue: check these cases
+first.
 
-## What the experiment tested
+## How I tested it
 
 Two questions, in order. The second only matters if the first passes.
 
